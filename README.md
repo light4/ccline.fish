@@ -3,6 +3,8 @@
 Type a thought directly at your shell prompt — no command, no prefix — and get
 an answer. If the answer contains shell commands, confirm once and run them.
 
+![ccline demo](docs/demo.gif)
+
 ```
 $ how do I find files bigger than 100MB here
 
