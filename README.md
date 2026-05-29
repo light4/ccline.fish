@@ -30,11 +30,15 @@ It hijacks zsh's `command_not_found_handler`. When you type something that
 isn't a real command, zsh hands the whole line to ccline:
 
 - **One word** (`gti`) → treated as a normal typo: `zsh: command not found: gti`.
-- **Two or more words** → treated as a thought, sent to the `claude` CLI
-  (`claude -p`). The answer is rendered as Markdown. Any runnable commands are
-  shown in an arrow-key menu — **↑/↓** to move, **Enter** to run the highlighted
-  command (or "Run all of them"), **q** to cancel. When stdout isn't a terminal
-  (piped/redirected), it falls back to a typed prompt (`1-N`, `a`=all, Enter=none).
+- **Two or more words** → treated as a thought, sent to your LLM CLI. The answer
+  is rendered as Markdown. Any runnable commands are shown in an arrow-key menu —
+  **↑/↓** to move, **Enter** to run the highlighted command (or "Run all of
+  them"), **q** to cancel. When stdout isn't a terminal (piped/redirected), it
+  falls back to a typed prompt (`1-N`, `a`=all, Enter=none).
+
+It uses the [`claude`](https://claude.com/claude-code) CLI if installed
+(preferred), otherwise the [`codex`](https://github.com/openai/codex) CLI —
+auto-detected. Force one with `CCLINE_BACKEND=claude` or `CCLINE_BACKEND=codex`.
 
 Markdown rendering uses [`glow`](https://github.com/charmbracelet/glow) if it's
 installed; otherwise a built-in `perl` renderer (no extra dependency).
@@ -42,7 +46,9 @@ installed; otherwise a built-in `perl` renderer (no extra dependency).
 ## Requirements
 
 - zsh (the macOS default shell)
-- The [`claude`](https://claude.com/claude-code) CLI on your `PATH`
+- One of these on your `PATH`, authenticated:
+  - [`claude`](https://claude.com/claude-code) (preferred), or
+  - [`codex`](https://github.com/openai/codex) (fallback)
 
 ## Install
 
@@ -65,8 +71,11 @@ new terminal (or `source ~/.zshrc`).
 
 ## Configuration
 
+- `CCLINE_BACKEND` — force the LLM CLI: `claude` or `codex`. Default is
+  auto-detect (claude preferred, codex fallback).
 - `CCLINE_MODEL` — override the model, e.g.
   `export CCLINE_MODEL=claude-haiku-4-5-20251001` for faster, cheaper answers.
+  Passed as `--model` to whichever backend is used.
 
 ## Running commands
 

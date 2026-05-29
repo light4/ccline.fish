@@ -22,9 +22,11 @@ the thought, hit enter.
 
 ### Why this backend / language
 
-- **Backend:** reuse the `claude` CLI already installed at
-  `/Users/jianshuo/.local/bin/claude` (v2.1.156). No separate API key, same
-  quality as Claude Code.
+- **Backend:** reuse an installed LLM CLI — `claude` (preferred) or `codex`
+  (fallback), auto-detected; override with `CCLINE_BACKEND`. No separate API
+  key. claude uses a clean isolated `claude -p`; codex uses `codex exec` in a
+  read-only sandbox with the system prompt prepended (codex has no
+  system-prompt flag).
 - **Language:** Bash/zsh. Zero dependencies, ships as a sourced shell function
   plus a helper script.
 
@@ -53,9 +55,11 @@ zsh: "how" is not a command → command_not_found_handler "how" "do" ...
    └─ word count >= 2 ?  → exec  ccline "$@"
                               │
                               ▼
-                      claude -p --system-prompt "<SYSTEM>" --tools "" \
-                        --setting-sources "" --strict-mcp-config \
-                        --output-format text "<joined args>"
+                      detect backend (claude preferred, else codex) and ask it
+                        claude: claude -p --system-prompt <S> --tools "" \
+                          --setting-sources "" --strict-mcp-config --output-format text
+                        codex:  codex exec --sandbox read-only --skip-git-repo-check \
+                          --color never -o <file>  (system prompt prepended to input)
                               │
                               ▼
                       render the answer as Markdown → ANSI (raw if not a tty)

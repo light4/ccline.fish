@@ -25,6 +25,58 @@ command is destructive, say so plainly.
 EOF
 }
 
+# Decide which LLM CLI to use. claude takes precedence; codex is the fallback.
+# CCLINE_BACKEND=claude|codex forces a choice (if that CLI is installed).
+ccline_backend() {
+  if [ -n "${CCLINE_BACKEND:-}" ] && command -v "$CCLINE_BACKEND" >/dev/null 2>&1; then
+    echo "$CCLINE_BACKEND"
+    return 0
+  fi
+  if command -v claude >/dev/null 2>&1; then
+    echo claude
+  elif command -v codex >/dev/null 2>&1; then
+    echo codex
+  fi
+}
+
+# Ask via the claude CLI. Clean, isolated call: no default agent prompt, tools,
+# settings, or MCP. Echoes the answer; returns claude's exit status.
+ccline_ask_claude() {
+  local prompt="$1" sys="$2"
+  local model_args=()
+  [ -n "${CCLINE_MODEL:-}" ] && model_args=(--model "$CCLINE_MODEL")
+  claude -p \
+    --system-prompt "$sys" \
+    --tools "" \
+    --setting-sources "" \
+    --strict-mcp-config \
+    --output-format text \
+    ${model_args[@]+"${model_args[@]}"} \
+    "$prompt"
+}
+
+# Ask via the codex CLI. codex exec has no system-prompt flag, so the formatting
+# instructions are prepended to the prompt. read-only sandbox so it can't change
+# anything while answering; -o captures just the final message.
+ccline_ask_codex() {
+  local prompt="$1" sys="$2"
+  local model_args=()
+  [ -n "${CCLINE_MODEL:-}" ] && model_args=(--model "$CCLINE_MODEL")
+  local out rc
+  out="$(mktemp)"
+  printf '%s\n\nQuestion: %s\n' "$sys" "$prompt" \
+    | codex exec \
+        --sandbox read-only \
+        --skip-git-repo-check \
+        --color never \
+        ${model_args[@]+"${model_args[@]}"} \
+        -o "$out" - > /dev/null 2>&1
+  rc=$?
+  cat "$out" 2>/dev/null
+  rm -f "$out"
+  return "$rc"
+}
+
 # Read an answer on stdin, print the lines that live inside ```bash / ```sh /
 # ```shell fenced blocks (one line per command, order preserved).
 ccline_extract_commands() {
@@ -135,8 +187,12 @@ ccline_main() {
     return 2
   fi
 
-  if ! command -v claude >/dev/null 2>&1; then
-    echo "ccline: 'claude' CLI not found. Install Claude Code: https://claude.com/claude-code" >&2
+  local backend
+  backend="$(ccline_backend)"
+  if [ -z "$backend" ]; then
+    echo "ccline: no LLM CLI found — install 'claude' (preferred) or 'codex':" >&2
+    echo "  Claude Code: https://claude.com/claude-code" >&2
+    echo "  Codex:       https://github.com/openai/codex" >&2
     return 127
   fi
 
@@ -144,28 +200,15 @@ ccline_main() {
   local sys
   sys="$(ccline_system_prompt)"
 
-  local model_args=()
-  [ -n "$CCLINE_MODEL" ] && model_args=(--model "$CCLINE_MODEL")
-
-  # Clean, isolated call: no default agent prompt, no tools, no settings
-  # (CLAUDE.md etc.), no MCP servers, plain-text output. Just the question plus
-  # our tiny system prompt that drives the run-commands feature.
   local answer rc
-  answer="$(claude -p \
-    --system-prompt "$sys" \
-    --tools "" \
-    --setting-sources "" \
-    --strict-mcp-config \
-    --output-format text \
-    ${model_args[@]+"${model_args[@]}"} \
-    "$prompt")"
+  answer="$("ccline_ask_${backend}" "$prompt" "$sys")"
   rc=$?
   if [ "$rc" -ne 0 ]; then
-    echo "ccline: claude exited with status $rc" >&2
+    echo "ccline: $backend exited with status $rc" >&2
     return "$rc"
   fi
   if [ -z "${answer//[[:space:]]/}" ]; then
-    echo "ccline: empty response from claude" >&2
+    echo "ccline: empty response from $backend" >&2
     return 1
   fi
 

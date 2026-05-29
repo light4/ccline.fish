@@ -97,9 +97,31 @@ rm -f "$runfile" "$sentinel"
 PATH="${STUB}:${PATH}" ccline_main >/dev/null 2>&1
 check "no args => rc 2" "2" "$?"
 
-# --- missing claude => rc 127 ---
+# --- no LLM CLI at all => rc 127 ---
 ( PATH="/nonexistent-only"; ccline_main hello there >/dev/null 2>&1 )
-check "missing claude => rc 127" "127" "$?"
+check "no LLM CLI => rc 127" "127" "$?"
+
+# --- backend detection: claude precedence, codex fallback, override, none ---
+BOTH="$(mktemp -d)"; ONLYCODEX="$(mktemp -d)"
+printf '#!/usr/bin/env bash\necho CLAUDE_REPLY\n' > "${BOTH}/claude"
+cat > "${BOTH}/codex" <<'CX'
+#!/usr/bin/env bash
+out=""; while [ $# -gt 0 ]; do case "$1" in -o) out="$2"; shift 2 ;; *) shift ;; esac; done
+cat >/dev/null   # consume the prompt on stdin
+[ -n "$out" ] && printf 'CODEX_REPLY\n' > "$out"
+CX
+cp "${BOTH}/codex" "${ONLYCODEX}/codex"
+chmod +x "${BOTH}/claude" "${BOTH}/codex" "${ONLYCODEX}/codex"
+
+check "backend: claude precedence"  "claude" "$(PATH="${BOTH}:/usr/bin:/bin" ccline_backend)"
+check "backend: codex fallback"     "codex"  "$(PATH="${ONLYCODEX}:/usr/bin:/bin" ccline_backend)"
+check "backend: override to codex"  "codex"  "$(PATH="${BOTH}:/usr/bin:/bin" CCLINE_BACKEND=codex ccline_backend)"
+check "backend: none found"         ""       "$(PATH=/nonexistent ccline_backend)"
+
+# end-to-end through the codex fallback (no claude on PATH)
+out="$(PATH="${ONLYCODEX}:/usr/bin:/bin" ccline_main ask codex something < /dev/null)"
+check "codex e2e: answer used" "CODEX_REPLY" "$(printf '%s' "$out" | grep -o CODEX_REPLY | head -1)"
+rm -rf "$BOTH" "$ONLYCODEX"
 
 rm -rf "$STUB"
 
