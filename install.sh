@@ -11,7 +11,7 @@ set -euo pipefail
 # Pinned to a release tag so the install command is stable across future
 # changes. Override with CCLINE_REF=main (or another tag) to install elsewhere.
 REPO="jianshuo/ccline"
-REF="${CCLINE_REF:-v0.1.0}"
+REF="${CCLINE_REF:-v0.2.0}"
 RAW="https://raw.githubusercontent.com/${REPO}/${REF}"
 
 BIN_DIR="${HOME}/.local/bin"

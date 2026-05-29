@@ -55,7 +55,7 @@ installed; otherwise a built-in `perl` renderer (no extra dependency).
 One line:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/jianshuo/ccline/v0.1.0/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/jianshuo/ccline/v0.2.0/install.sh | bash
 ```
 
 Or from a clone:
