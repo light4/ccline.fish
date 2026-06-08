@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ccline — Ask your shell anything</title>
+<meta name="description" content="A zsh plugin that hijacks command_not_found_handler — type a thought at your shell prompt and get an answer from Claude or Codex.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Instrument+Serif:ital@0;1&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* ── Design tokens ─────────────────────────────────────── */
+  :root {
+    --ink:       #0f0f0f;
+    --ink-mid:   #3a3a3a;
+    --ink-soft:  #6b6b6b;
+    --paper:     #fafaf8;
+    --paper-alt: #f2f1ee;
+    --paper-warm:#ede9e2;
+    --rule:      #e0ddd8;
+    --accent:    #1a1a1a;
+    --lime:      #b8e04a;
+    --lime-dark: #8ab834;
+    --shell-bg:  #1c1c1e;
+    --shell-line:#2c2c2e;
+    --shell-green: #b5f23c;
+    --shell-white: #f2f2f2;
+    --shell-gray:  #8e8e93;
+    --shell-blue:  #64d2ff;
+    --shell-orange:#ff9f0a;
+
+    --font-display: 'Syne', sans-serif;
+    --font-serif:   'Instrument Serif', serif;
+    --font-mono:    'DM Mono', monospace;
+
+    --r: 6px;
+    --r-lg: 12px;
+    --shadow-card: 0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
+    --shadow-term: 0 8px 40px rgba(0,0,0,.22), 0 2px 8px rgba(0,0,0,.12);
+  }
+
+  /* ── Reset ──────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; scroll-behavior: smooth; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-display);
+    line-height: 1.6;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Noise grain overlay ─────────────────────────────────── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 1000; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+    opacity: .025;
+  }
+
+  /* ── Layout ──────────────────────────────────────────────── */
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 32px; }
+
+  /* ── Nav ─────────────────────────────────────────────────── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(250,250,248,.88);
+    backdrop-filter: blur(16px) saturate(1.4);
+    border-bottom: 1px solid var(--rule);
+  }
+  nav .inner {
+    display: flex; align-items: center; justify-content: space-between;
+    max-width: 1100px; margin: 0 auto; padding: 14px 32px;
+  }
+  .nav-logo {
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    font-weight: 500;
+    letter-spacing: -.02em;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .nav-logo span {
+    display: inline-block;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 2px 7px;
+    border-radius: 3px;
+    margin-right: 2px;
+  }
+  .nav-links { display: flex; gap: 28px; align-items: center; }
+  .nav-links a {
+    font-size: .82rem; font-weight: 600; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--ink-soft);
+    text-decoration: none; transition: color .15s;
+  }
+  .nav-links a:hover { color: var(--ink); }
+  .nav-gh {
+    display: flex; align-items: center; gap: 7px;
+    font-size: .82rem; font-weight: 600; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--ink);
+    text-decoration: none;
+    background: var(--ink); color: var(--paper);
+    padding: 7px 14px; border-radius: var(--r);
+    transition: opacity .15s;
+  }
+  .nav-gh:hover { opacity: .85; }
+
+  /* ── Hero ────────────────────────────────────────────────── */
+  .hero {
+    padding: 140px 0 80px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 56px;
+    align-items: center;
+  }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono);
+    font-size: .72rem; font-weight: 500; letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    border: 1px solid var(--rule);
+    padding: 5px 11px; border-radius: 99px;
+    margin-bottom: 24px;
+    animation: fadeSlideUp .6s ease both;
+  }
+  .hero-eyebrow .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--lime-dark);
+    box-shadow: 0 0 0 2px rgba(184,224,74,.3);
+  }
+  .hero-h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.6rem, 4.5vw, 4rem);
+    font-weight: 800;
+    letter-spacing: -.04em;
+    line-height: 1.05;
+    color: var(--ink);
+    animation: fadeSlideUp .6s .1s ease both;
+  }
+  .hero-h1 em {
+    font-style: normal;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    color: var(--ink-mid);
+  }
+  .hero-sub {
+    margin-top: 20px;
+    font-size: 1.05rem;
+    font-weight: 400;
+    color: var(--ink-mid);
+    line-height: 1.65;
+    max-width: 420px;
+    animation: fadeSlideUp .6s .2s ease both;
+  }
+  .hero-install {
+    margin-top: 32px;
+    display: flex; flex-direction: column; gap: 10px;
+    animation: fadeSlideUp .6s .3s ease both;
+  }
+  .install-label {
+    font-family: var(--font-mono);
+    font-size: .7rem; font-weight: 500; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--ink-soft);
+  }
+  .install-box {
+    display: flex; align-items: center; gap: 0;
+    background: var(--shell-bg);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-term);
+    max-width: 480px;
+  }
+  .install-box .prompt {
+    padding: 14px 12px 14px 16px;
+    font-family: var(--font-mono);
+    font-size: .78rem; color: var(--shell-green);
+    user-select: none; white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .install-box code {
+    flex: 1; padding: 14px 0;
+    font-family: var(--font-mono);
+    font-size: .72rem; color: var(--shell-white);
+    word-break: break-all;
+  }
+  .copy-btn {
+    flex-shrink: 0;
+    background: none; border: none; cursor: pointer;
+    padding: 14px 14px;
+    color: var(--shell-gray);
+    transition: color .15s;
+    font-size: .8rem;
+    display: flex; align-items: center;
+  }
+  .copy-btn:hover { color: var(--shell-white); }
+  .copy-btn svg { width: 15px; height: 15px; }
+  .hero-meta {
+    margin-top: 14px;
+    font-family: var(--font-mono);
+    font-size: .68rem; color: var(--ink-soft);
+    display: flex; gap: 16px;
+    animation: fadeSlideUp .6s .35s ease both;
+  }
+  .hero-meta a { color: inherit; text-decoration: underline; }
+
+  /* ── Terminal window ─────────────────────────────────────── */
+  .term-window {
+    background: var(--shell-bg);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-term);
+    overflow: hidden;
+    animation: fadeSlideUp .6s .15s ease both;
+  }
+  .term-titlebar {
+    display: flex; align-items: center; gap: 6px;
+    padding: 12px 16px;
+    background: #262628;
+    border-bottom: 1px solid #333;
+  }
+  .term-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .term-dot.r { background: #ff5f57; }
+  .term-dot.y { background: #febc2e; }
+  .term-dot.g { background: #28c840; }
+  .term-title {
+    flex: 1; text-align: center;
+    font-family: var(--font-mono); font-size: .67rem;
+    color: var(--shell-gray); letter-spacing: .03em;
+  }
+  .term-body {
+    padding: 20px 22px 24px;
+    font-family: var(--font-mono);
+    font-size: .78rem; line-height: 1.7;
+    color: var(--shell-white);
+    min-height: 340px;
+  }
+
+  /* Terminal animation lines */
+  .tl { opacity: 0; }
+  .tl.show { animation: fadeIn .25s ease forwards; }
+
+  .t-prompt { color: var(--shell-green); }
+  .t-cmd    { color: var(--shell-white); }
+  .t-output { color: #a8d8a8; }
+  .t-code   { color: var(--shell-blue); font-style: italic; }
+  .t-sep    { color: #444; }
+  .t-note   { color: var(--shell-gray); }
+  .t-item   { color: var(--shell-white); }
+  .t-sel    { color: var(--shell-green); }
+  .t-run    { color: var(--shell-orange); }
+  .t-result { color: var(--shell-white); }
+  .cursor {
+    display: inline-block;
+    width: 8px; height: 1em; vertical-align: text-bottom;
+    background: var(--shell-green); margin-left: 2px;
+    animation: blink 1s step-end infinite;
+  }
+
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Divider line ────────────────────────────────────────── */
+  .rule-section {
+    border: none; border-top: 1px solid var(--rule); margin: 0;
+  }
+
+  /* ── How it works ────────────────────────────────────────── */
+  .how {
+    padding: 80px 0;
+    background: var(--paper-alt);
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  .section-label {
+    font-family: var(--font-mono);
+    font-size: .7rem; font-weight: 500; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink-soft);
+    margin-bottom: 12px;
+  }
+  .section-h2 {
+    font-family: var(--font-display);
+    font-size: clamp(1.8rem, 3vw, 2.6rem);
+    font-weight: 800; letter-spacing: -.04em;
+    line-height: 1.1; color: var(--ink);
+    margin-bottom: 16px;
+  }
+  .section-h2 em {
+    font-family: var(--font-serif); font-style: italic;
+    font-weight: 400; color: var(--ink-mid);
+  }
+  .how-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 64px; align-items: start;
+    margin-top: 48px;
+  }
+  .how-steps { display: flex; flex-direction: column; gap: 0; }
+  .how-step {
+    display: flex; gap: 20px;
+    padding: 24px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .how-step:first-child { border-top: 1px solid var(--rule); }
+  .step-num {
+    font-family: var(--font-mono);
+    font-size: .68rem; font-weight: 500; color: var(--ink-soft);
+    letter-spacing: .04em;
+    min-width: 28px; padding-top: 3px;
+  }
+  .step-content h3 {
+    font-family: var(--font-display);
+    font-size: .95rem; font-weight: 700; letter-spacing: -.02em;
+    color: var(--ink); margin-bottom: 6px;
+  }
+  .step-content p {
+    font-size: .85rem; color: var(--ink-mid); line-height: 1.6;
+  }
+  .step-content code {
+    font-family: var(--font-mono);
+    font-size: .78em;
+    background: var(--paper-warm);
+    padding: 1px 5px; border-radius: 3px;
+    color: var(--ink);
+  }
+
+  /* the "magic" visual diagram */
+  .how-diagram {
+    background: var(--shell-bg);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-term);
+    overflow: hidden;
+    position: sticky; top: 88px;
+  }
+  .diag-bar {
+    padding: 10px 16px;
+    background: #262628;
+    border-bottom: 1px solid #333;
+    font-family: var(--font-mono); font-size: .65rem;
+    color: var(--shell-gray); letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+  .diag-body { padding: 22px; }
+  .diag-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid #2a2a2c;
+  }
+  .diag-row:last-child { border-bottom: none; }
+  .diag-icon {
+    font-size: 1.1rem; min-width: 28px; text-align: center;
+    padding-top: 2px;
+  }
+  .diag-text {
+    font-family: var(--font-mono); font-size: .72rem; line-height: 1.55;
+  }
+  .diag-text strong {
+    color: var(--shell-white); font-weight: 500; display: block;
+    margin-bottom: 2px;
+  }
+  .diag-text span { color: var(--shell-gray); }
+  .diag-arrow {
+    text-align: center; padding: 6px 0;
+    font-family: var(--font-mono); font-size: .72rem;
+    color: #444;
+  }
+
+  /* ── Features ────────────────────────────────────────────── */
+  .features {
+    padding: 80px 0;
+  }
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    margin-top: 48px;
+  }
+  .feat {
+    background: var(--paper);
+    padding: 32px 28px;
+    transition: background .2s;
+  }
+  .feat:hover { background: var(--paper-alt); }
+  .feat-icon {
+    width: 40px; height: 40px;
+    background: var(--ink);
+    border-radius: var(--r);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 16px;
+    font-size: 1.1rem;
+  }
+  .feat h3 {
+    font-family: var(--font-display);
+    font-size: .95rem; font-weight: 700; letter-spacing: -.02em;
+    color: var(--ink); margin-bottom: 8px;
+  }
+  .feat p {
+    font-size: .84rem; color: var(--ink-mid); line-height: 1.6;
+  }
+  .feat code {
+    font-family: var(--font-mono); font-size: .78em;
+    background: var(--paper-warm); padding: 1px 5px;
+    border-radius: 3px; color: var(--ink);
+  }
+
+  /* ── Requirements ────────────────────────────────────────── */
+  .reqs {
+    padding: 80px 0;
+    background: var(--paper-alt);
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  .reqs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
+    margin-top: 48px;
+  }
+  .req-card {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-lg);
+    padding: 24px;
+    box-shadow: var(--shadow-card);
+  }
+  .req-card .req-tag {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: .65rem; font-weight: 500;
+    letter-spacing: .07em; text-transform: uppercase;
+    color: var(--paper); background: var(--ink);
+    padding: 3px 8px; border-radius: 3px;
+    margin-bottom: 12px;
+  }
+  .req-card .req-tag.optional {
+    background: var(--paper-warm); color: var(--ink-soft);
+  }
+  .req-card h3 {
+    font-family: var(--font-mono);
+    font-size: .9rem; font-weight: 500; color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .req-card p { font-size: .82rem; color: var(--ink-mid); line-height: 1.6; }
+  .req-card a { color: var(--ink); text-underline-offset: 3px; }
+
+  /* ── Config ──────────────────────────────────────────────── */
+  .config {
+    padding: 80px 0;
+  }
+  .config-inner {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: start;
+    margin-top: 48px;
+  }
+  .config-table {
+    border: 1px solid var(--rule);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+  }
+  .config-row {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .config-row:last-child { border-bottom: none; }
+  .config-row .var {
+    padding: 14px 16px;
+    font-family: var(--font-mono); font-size: .75rem;
+    color: var(--ink); background: var(--paper-alt);
+    border-right: 1px solid var(--rule);
+    font-weight: 500;
+  }
+  .config-row .desc {
+    padding: 14px 16px;
+    font-size: .8rem; color: var(--ink-mid); line-height: 1.5;
+    background: var(--paper);
+  }
+  .config-row .desc code {
+    font-family: var(--font-mono); font-size: .8em;
+    background: var(--paper-warm); padding: 1px 4px; border-radius: 3px;
+  }
+  .config-note {
+    background: var(--paper-warm);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-lg);
+    padding: 24px;
+  }
+  .config-note h3 {
+    font-family: var(--font-display);
+    font-size: 1rem; font-weight: 700; letter-spacing: -.02em;
+    color: var(--ink); margin-bottom: 10px;
+  }
+  .config-note p {
+    font-size: .84rem; color: var(--ink-mid); line-height: 1.65;
+    margin-bottom: 10px;
+  }
+  .config-note p:last-child { margin-bottom: 0; }
+  .config-note code {
+    font-family: var(--font-mono); font-size: .78em;
+    background: rgba(0,0,0,.07); padding: 1px 5px; border-radius: 3px;
+  }
+
+  /* ── CTA ─────────────────────────────────────────────────── */
+  .cta {
+    padding: 96px 0;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .cta::before {
+    content: 'ccline';
+    position: absolute;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    font-family: var(--font-display);
+    font-size: clamp(6rem, 18vw, 18rem);
+    font-weight: 800; letter-spacing: -.06em;
+    color: var(--paper-warm);
+    pointer-events: none; user-select: none;
+    white-space: nowrap;
+    z-index: 0;
+  }
+  .cta > * { position: relative; z-index: 1; }
+  .cta h2 {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    font-weight: 800; letter-spacing: -.04em;
+    color: var(--ink); margin-bottom: 12px;
+  }
+  .cta h2 em {
+    font-family: var(--font-serif); font-style: italic;
+    font-weight: 400; color: var(--ink-mid);
+  }
+  .cta p {
+    font-size: 1rem; color: var(--ink-mid); margin-bottom: 36px;
+  }
+  .cta-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--ink); color: var(--paper);
+    font-family: var(--font-display);
+    font-size: .88rem; font-weight: 700; letter-spacing: -.01em;
+    padding: 13px 24px; border-radius: var(--r);
+    text-decoration: none; transition: opacity .15s, transform .1s;
+  }
+  .btn-primary:hover { opacity: .88; transform: translateY(-1px); }
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--paper); color: var(--ink);
+    font-family: var(--font-display);
+    font-size: .88rem; font-weight: 700; letter-spacing: -.01em;
+    padding: 13px 24px; border-radius: var(--r);
+    text-decoration: none;
+    border: 1px solid var(--rule);
+    transition: background .15s, transform .1s;
+  }
+  .btn-secondary:hover { background: var(--paper-alt); transform: translateY(-1px); }
+
+  /* ── Footer ──────────────────────────────────────────────── */
+  footer {
+    border-top: 1px solid var(--rule);
+    padding: 28px 0;
+  }
+  footer .inner {
+    display: flex; justify-content: space-between; align-items: center;
+    max-width: 1100px; margin: 0 auto; padding: 0 32px;
+  }
+  footer .foot-left {
+    font-family: var(--font-mono); font-size: .7rem; color: var(--ink-soft);
+  }
+  footer .foot-right {
+    font-family: var(--font-mono); font-size: .7rem; color: var(--ink-soft);
+  }
+  footer a { color: inherit; text-underline-offset: 3px; }
+
+  /* ── Scroll reveal ───────────────────────────────────────── */
+  .reveal {
+    opacity: 0; transform: translateY(20px);
+    transition: opacity .55s ease, transform .55s ease;
+  }
+  .reveal.visible { opacity: 1; transform: none; }
+
+  /* ── Responsive ──────────────────────────────────────────── */
+  @media (max-width: 840px) {
+    .hero-grid, .how-grid, .config-inner { grid-template-columns: 1fr; gap: 36px; }
+    .features-grid { grid-template-columns: 1fr; }
+    .reqs-grid { grid-template-columns: 1fr; }
+    .how-diagram { position: static; }
+    nav .inner { padding: 12px 20px; }
+    .container { padding: 0 20px; }
+    footer .inner { flex-direction: column; gap: 8px; text-align: center; }
+    .cta::before { display: none; }
+    .nav-links { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Nav ──────────────────────────────────────────────────── -->
+<nav>
+  <div class="inner">
+    <a class="nav-logo" href="/"><span>cc</span>line</a>
+    <div class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#install">Install</a>
+      <a class="nav-gh" href="https://github.com/jianshuo/ccline" target="_blank" rel="noopener">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        GitHub
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Hero ─────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-grid">
+      <div class="hero-left">
+        <div class="hero-eyebrow">
+          <span class="dot"></span>
+          zsh plugin · v0.2.2
+        </div>
+        <h1 class="hero-h1">
+          Ask your shell<br>
+          <em>anything.</em>
+        </h1>
+        <p class="hero-sub">
+          Type a thought directly at the prompt — no command, no prefix.
+          ccline sends it to Claude or Codex, renders the answer as Markdown,
+          and lets you run any suggested command in your live shell.
+        </p>
+
+        <div class="hero-install" id="install">
+          <span class="install-label">One-line install</span>
+          <div class="install-box">
+            <span class="prompt">$</span>
+            <code id="install-cmd">curl -fsSL https://raw.githubusercontent.com/jianshuo/ccline/v0.2.2/install.sh | bash</code>
+            <button class="copy-btn" onclick="copyInstall()" title="Copy to clipboard">
+              <svg id="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="hero-meta">
+          <span>Requires <a href="https://claude.com/claude-code" target="_blank">claude</a> or <a href="https://github.com/openai/codex" target="_blank">codex</a> CLI</span>
+          <span>·</span>
+          <span>macOS / zsh</span>
+          <span>·</span>
+          <span>MIT license</span>
+        </div>
+      </div>
+
+      <div class="hero-right">
+        <div class="term-window" id="terminal">
+          <div class="term-titlebar">
+            <span class="term-dot r"></span>
+            <span class="term-dot y"></span>
+            <span class="term-dot g"></span>
+            <span class="term-title">~ / projects / myapp</span>
+          </div>
+          <div class="term-body" id="term-lines">
+            <!-- Populated by JS animation -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── How it works ──────────────────────────────────────────── -->
+<section class="how" id="how">
+  <div class="container">
+    <p class="section-label reveal">How it works</p>
+    <h2 class="section-h2 reveal">One handler.<br><em>Infinite answers.</em></h2>
+
+    <div class="how-grid">
+      <div class="how-steps">
+        <div class="how-step reveal">
+          <span class="step-num">01</span>
+          <div class="step-content">
+            <h3>Hijacks <code>command_not_found_handler</code></h3>
+            <p>When zsh can't find a command, ccline intercepts. One word? Normal "command not found" — fast. Two or more words? Sent straight to your LLM CLI.</p>
+          </div>
+        </div>
+        <div class="how-step reveal">
+          <span class="step-num">02</span>
+          <div class="step-content">
+            <h3>Renders the answer</h3>
+            <p>Uses <code>glow</code> for beautiful Markdown rendering if installed. Falls back to a built-in <code>perl</code> renderer with no extra dependency required.</p>
+          </div>
+        </div>
+        <div class="how-step reveal">
+          <span class="step-num">03</span>
+          <div class="step-content">
+            <h3>Pick a command to run</h3>
+            <p>Any shell commands in the answer appear in an arrow-key menu. Hit <code>Enter</code> to run, <code>q</code> to cancel — or run all of them at once.</p>
+          </div>
+        </div>
+        <div class="how-step reveal">
+          <span class="step-num">04</span>
+          <div class="step-content">
+            <h3>Runs in your live shell</h3>
+            <p>The command executes via <code>eval</code> in your actual shell session — so <code>cd</code>, <code>export</code>, aliases, and history all persist exactly as if you typed it.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="how-diagram reveal">
+        <div class="diag-bar">Signal flow</div>
+        <div class="diag-body">
+          <div class="diag-row">
+            <div class="diag-icon">⌨️</div>
+            <div class="diag-text">
+              <strong>You type at the prompt</strong>
+              <span>Two or more words, not a real command</span>
+            </div>
+          </div>
+          <div class="diag-arrow">↓</div>
+          <div class="diag-row">
+            <div class="diag-icon">🔀</div>
+            <div class="diag-text">
+              <strong>zsh command_not_found_handler</strong>
+              <span>ccline intercepts the call</span>
+            </div>
+          </div>
+          <div class="diag-arrow">↓</div>
+          <div class="diag-row">
+            <div class="diag-icon">🤖</div>
+            <div class="diag-text">
+              <strong>claude or codex CLI</strong>
+              <span>Auto-detected, or set CCLINE_BACKEND</span>
+            </div>
+          </div>
+          <div class="diag-arrow">↓</div>
+          <div class="diag-row">
+            <div class="diag-icon">📋</div>
+            <div class="diag-text">
+              <strong>Markdown-rendered answer</strong>
+              <span>glow or built-in perl renderer</span>
+            </div>
+          </div>
+          <div class="diag-arrow">↓</div>
+          <div class="diag-row">
+            <div class="diag-icon">▶️</div>
+            <div class="diag-text">
+              <strong>eval in your live shell</strong>
+              <span>cd, export, aliases persist</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Features ─────────────────────────────────────────────── -->
+<section class="features" id="features">
+  <div class="container">
+    <p class="section-label reveal">Features</p>
+    <h2 class="section-h2 reveal">Designed to stay<br><em>out of your way.</em></h2>
+
+    <div class="features-grid reveal">
+      <div class="feat">
+        <div class="feat-icon">⚡</div>
+        <h3>Zero overhead for typos</h3>
+        <p>Single-word inputs (<code>gti</code>) still show the normal "command not found" message instantly — no LLM roundtrip, no latency.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">🔌</div>
+        <h3>Auto-detects your CLI</h3>
+        <p>Prefers <code>claude</code> if installed. Falls back to <code>codex</code> automatically. Override anytime with <code>CCLINE_BACKEND</code>.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">🖥️</div>
+        <h3>Beautiful Markdown output</h3>
+        <p>Headings, bold, inline code, bullets, colorized code blocks — rendered with <code>glow</code> or a zero-dependency perl fallback.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">🏠</div>
+        <h3>Runs in your live shell</h3>
+        <p><code>cd</code>, <code>export</code>, aliases, functions — everything persists. The selected command runs via <code>eval</code>, not a subprocess.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">🎯</div>
+        <h3>Arrow-key command picker</h3>
+        <p>Commands extracted from the answer appear in an interactive menu. ↑/↓ to choose, Enter to run, <code>q</code> to cancel, or run them all.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">🔧</div>
+        <h3>One-line install &amp; uninstall</h3>
+        <p>Puts <code>ccline</code> in <code>~/.local/bin</code>, sources automatically from <code>~/.zshrc</code>. Uninstall by removing two paths.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Requirements ─────────────────────────────────────────── -->
+<section class="reqs">
+  <div class="container">
+    <p class="section-label reveal">Requirements</p>
+    <h2 class="section-h2 reveal">What you need<br><em>to get started.</em></h2>
+    <div class="reqs-grid">
+      <div class="req-card reveal">
+        <span class="req-tag">Required</span>
+        <h3>zsh</h3>
+        <p>The default shell on macOS. ccline hooks into zsh's <code>command_not_found_handler</code> — no other shells supported.</p>
+      </div>
+      <div class="req-card reveal">
+        <span class="req-tag">Required — pick one</span>
+        <h3>claude or codex</h3>
+        <p>
+          <a href="https://claude.com/claude-code" target="_blank">claude CLI</a> (preferred) or
+          <a href="https://github.com/openai/codex" target="_blank">codex CLI</a> — authenticated and on your PATH.
+          ccline auto-detects which one to use.
+        </p>
+      </div>
+      <div class="req-card reveal">
+        <span class="req-tag optional">Optional</span>
+        <h3>glow</h3>
+        <p>
+          <a href="https://github.com/charmbracelet/glow" target="_blank">glow</a> for beautiful terminal Markdown rendering. If not installed, a built-in perl renderer handles it — no extra dep needed.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Config ────────────────────────────────────────────────── -->
+<section class="config">
+  <div class="container">
+    <p class="section-label reveal">Configuration</p>
+    <h2 class="section-h2 reveal">Two env vars.<br><em>That's it.</em></h2>
+
+    <div class="config-inner">
+      <div class="config-table reveal">
+        <div class="config-row">
+          <div class="var">CCLINE_BACKEND</div>
+          <div class="desc">Force the LLM CLI: <code>claude</code> or <code>codex</code>. Default is auto-detect (claude preferred, codex fallback).</div>
+        </div>
+        <div class="config-row">
+          <div class="var">CCLINE_MODEL</div>
+          <div class="desc">Override the model, e.g. <code>claude-opus-4-8</code>. Passed as <code>--model</code> to whichever backend is active.</div>
+        </div>
+      </div>
+
+      <div class="config-note reveal">
+        <h3>Sensible defaults</h3>
+        <p>The claude backend defaults to <code>claude-sonnet-4-6</code> — the fastest model for short interactive prompts.</p>
+        <p>No config file. No JSON. Just set env vars in your <code>~/.zshrc</code> before the <code>source</code> line.</p>
+        <p>Re-running the install script is safe — it won't duplicate the <code>source</code> line.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ───────────────────────────────────────────────────── -->
+<section class="cta">
+  <h2>Start asking<br><em>your shell.</em></h2>
+  <p>One command. Works immediately. No config required.</p>
+  <div class="cta-buttons">
+    <a class="btn-primary" href="https://github.com/jianshuo/ccline" target="_blank" rel="noopener">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+      View on GitHub
+    </a>
+    <a class="btn-secondary" href="#install" onclick="copyInstall()">
+      Copy install command
+    </a>
+  </div>
+</section>
+
+<!-- ── Footer ───────────────────────────────────────────────── -->
+<footer>
+  <div class="inner">
+    <span class="foot-left">
+      <a href="https://github.com/jianshuo/ccline">ccline</a> — MIT license
+    </span>
+    <span class="foot-right">
+      by <a href="https://github.com/jianshuo">jianshuo</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+/* ── Terminal animation ───────────────────────────────────────── */
+const lines = [
+  { delay: 400,  html: '<span class="t-prompt">jianshuo@mac</span><span class="t-note"> ~/projects/myapp </span><span class="t-sel">$</span> ' },
+  { delay: 900,  html: '<span class="t-cmd">how do I find files bigger than 100MB here</span>' },
+  { delay: 1400, html: '' },
+  { delay: 1700, html: '<span class="t-code">    find . -maxdepth 1 -type f -size +100M</span>' },
+  { delay: 2000, html: '' },
+  { delay: 2100, html: '<span class="t-note">This lists files only in the current directory (not subdirectories).</span>' },
+  { delay: 2200, html: '<span class="t-note">Remove <span style="color:#64d2ff">-maxdepth 1</span> to search recursively.</span>' },
+  { delay: 2400, html: '' },
+  { delay: 2550, html: '<span class="t-sep">─────────────────────────────────────────────</span>' },
+  { delay: 2650, html: '<span class="t-note">Commands found — ↑/↓ to choose, Enter to run, q to cancel:</span>' },
+  { delay: 2750, html: '<span class="t-sel"> ❯ find . -maxdepth 1 -type f -size +100M</span>' },
+  { delay: 2850, html: '<span class="t-item">   find . -type f -size +100M</span>' },
+  { delay: 2950, html: '<span class="t-run">   ➤  Run all of them</span>' },
+  { delay: 3050, html: '<span class="t-note">   ✗  Cancel</span>' },
+  { delay: 3050, html: '' },
+  { delay: 4200, html: '<span class="t-prompt">jianshuo@mac</span><span class="t-note"> ~/projects/myapp </span><span class="t-sel">$</span> <span class="t-code">find . -maxdepth 1 -type f -size +100M</span>' },
+  { delay: 4700, html: '<span class="t-result">./big.iso</span>' },
+  { delay: 5100, html: '<span class="t-result">./archive.tar</span>' },
+  { delay: 5500, html: '' },
+  { delay: 5700, html: '<span class="t-prompt">jianshuo@mac</span><span class="t-note"> ~/projects/myapp </span><span class="t-sel">$</span> <span class="cursor"></span>' },
+];
+
+function runTerminal() {
+  const container = document.getElementById('term-lines');
+  container.innerHTML = '';
+
+  // First two lines on same row (prompt + command)
+  let promptEl = null;
+
+  lines.forEach((line, i) => {
+    setTimeout(() => {
+      // First line is the prompt prefix; second line appends the command to it
+      if (i === 0) {
+        const el = document.createElement('div');
+        el.className = 'tl';
+        el.innerHTML = line.html;
+        container.appendChild(el);
+        requestAnimationFrame(() => el.classList.add('show'));
+        promptEl = el;
+      } else if (i === 1) {
+        // Append command text to prompt line (animate typing)
+        if (promptEl) {
+          promptEl.innerHTML += line.html;
+        }
+      } else {
+        const el = document.createElement('div');
+        el.className = 'tl';
+        el.innerHTML = line.html;
+        container.appendChild(el);
+        requestAnimationFrame(() => el.classList.add('show'));
+      }
+    }, line.delay);
+  });
+
+  // Loop
+  setTimeout(runTerminal, 8500);
+}
+
+document.addEventListener('DOMContentLoaded', runTerminal);
+
+/* ── Copy install ─────────────────────────────────────────────── */
+function copyInstall() {
+  const cmd = document.getElementById('install-cmd').textContent;
+  navigator.clipboard.writeText(cmd).then(() => {
+    const icon = document.getElementById('copy-icon');
+    icon.outerHTML = '<svg id="copy-icon" viewBox="0 0 24 24" fill="none" stroke="#b5f23c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+    setTimeout(() => {
+      document.getElementById('copy-icon').outerHTML = '<svg id="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+    }, 2000);
+  });
+}
+
+/* ── Scroll reveal ────────────────────────────────────────────── */
+const observer = new IntersectionObserver(
+  entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
+  { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
+);
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
