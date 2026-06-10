@@ -512,3 +512,10 @@ gh api /repos/jianshuo/ccline --jq '.stargazers_count'
 | #7950  | jupyter/notebook | ~13k | https://github.com/jupyter/notebook/discussions/7950 |
 | #3770  | pmndrs/react-three-fiber | ~31k | https://github.com/pmndrs/react-three-fiber/discussions/3770 |
 | #2744  | pmndrs/drei | ~10k | https://github.com/pmndrs/drei/discussions/2744 |
+
+### Round 17 — 2026-06-10（中文社区 + SolidJS）
+
+| Discussion | Repo | 星数 | 链接 |
+|-----------|------|------|------|
+| #1222  | tw93/Pake | ~50k | https://github.com/tw93/Pake/discussions/1222 |
+| #2753  | solidjs/solid | ~36k | https://github.com/solidjs/solid/discussions/2753 |
