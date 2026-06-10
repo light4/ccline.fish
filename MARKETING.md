@@ -362,3 +362,29 @@ gh api /repos/jianshuo/ccline --jq '.stargazers_count'
 | #2529  | orbstack/orbstack | ~9k | https://github.com/orgs/orbstack/discussions/2529 |
 | #786   | charmbracelet/huh | ~7k | https://github.com/charmbracelet/huh/discussions/786 |
 | #6052  | pallets/flask | ~72k | https://github.com/orgs/pallets/discussions/6052 |
+
+### Round 7 — 2026-06-10（前端框架 + 知识管理 + 容器工具）
+
+| Discussion | Repo | 星数 | 链接 |
+|-----------|------|------|------|
+| #13364 | vuejs/vue | ~210k | https://github.com/vuejs/vue/discussions/13364 |
+| #18410 | sveltejs/svelte | ~87k | https://github.com/sveltejs/svelte/discussions/18410 |
+| #22658 | vitejs/vite | ~81k | https://github.com/vitejs/vite/discussions/22658 |
+| #41283 | dbeaver/dbeaver | ~50k | https://github.com/orgs/dbeaver/discussions/41283 |
+| #21924 | run-llama/llama_index | ~50k | https://github.com/run-llama/llama_index/discussions/21924 |
+| #12789 | logseq/logseq | ~43k | https://github.com/logseq/logseq/discussions/12789 |
+| #12972 | paperless-ngx/paperless-ngx | ~42k | https://github.com/paperless-ngx/paperless-ngx/discussions/12972 |
+| #2162  | folke/lazy.nvim | ~21k | https://github.com/folke/lazy.nvim/discussions/2162 |
+| #2363  | instructor-ai/instructor | ~13k | https://github.com/567-labs/instructor/discussions/2363 |
+| #908   | dlvhdr/gh-dash | ~12k | https://github.com/dlvhdr/gh-dash/discussions/908 |
+| #342   | maaslalani/slides | ~12k | https://github.com/maaslalani/slides/discussions/342 |
+| #9968  | streetwriters/Notesnook | ~14k | https://github.com/streetwriters/notesnook/discussions/9968 |
+| #26217 | coder/coder | ~13k | https://github.com/coder/coder/discussions/26217 |
+| #4396  | miniflux/v2 | ~9k | https://github.com/orgs/miniflux/discussions/4396 |
+| #1283  | wbthomason/packer.nvim | ~8k | https://github.com/wbthomason/packer.nvim/discussions/1283 |
+| #7183  | yarnpkg/berry | ~8k | https://github.com/yarnpkg/berry/discussions/7183 |
+| #4015  | dendronhq/dendron | ~7k | https://github.com/dendronhq/dendron/discussions/4015 |
+| #899   | charmbracelet/soft-serve | ~7k | https://github.com/charmbracelet/soft-serve/discussions/899 |
+| #256   | newmarcel/KeepingYouAwake | ~7k | https://github.com/newmarcel/KeepingYouAwake/discussions/256 |
+| #1676  | writefreely/writefreely | ~5k | https://github.com/writefreely/writefreely/discussions/1676 |
+| #782   | zdharma-continuum/zinit | ~5k | https://github.com/zdharma-continuum/zinit/discussions/782 |
