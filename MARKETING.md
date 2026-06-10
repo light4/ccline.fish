@@ -426,3 +426,14 @@ gh api /repos/jianshuo/ccline --jq '.stargazers_count'
 | #4568  | bufbuild/buf | ~11k | https://github.com/bufbuild/buf/discussions/4568 |
 | #6308  | gruntwork-io/terragrunt | ~10k | https://github.com/gruntwork-io/terragrunt/discussions/6308 |
 | #5935  | fluxcd/flux2 | ~8k | https://github.com/fluxcd/flux2/discussions/5935 |
+
+### Round 11 — 2026-06-10（前端 + 测试 + macOS VM）
+
+| Discussion | Repo | 星数 | 链接 |
+|-----------|------|------|------|
+| #20213 | tailwindlabs/tailwindcss | ~95k | https://github.com/tailwindlabs/tailwindcss/discussions/20213 |
+| #10911 | TanStack/query | ~50k | https://github.com/TanStack/query/discussions/10911 |
+| #5113  | preactjs/preact | ~39k | https://github.com/preactjs/preact/discussions/5113 |
+| #1587  | abiosoft/colima | ~29k | https://github.com/abiosoft/colima/discussions/1587 |
+| #3334  | pmndrs/jotai | ~21k | https://github.com/pmndrs/jotai/discussions/3334 |
+| #10565 | vitest-dev/vitest | ~17k | https://github.com/vitest-dev/vitest/discussions/10565 |
