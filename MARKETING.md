@@ -180,6 +180,46 @@
 | #2167  | gitleaks/gitleaks | ~28k | https://github.com/gitleaks/gitleaks/discussions/2167 |
 | #152   | nikitavoloboev/my-mac | ~21k | https://github.com/nikivdev/flow/discussions/152 |
 
+### Round 18（2026-06-10，9 条）
+
+| Discussion | Repo | 星数 | URL |
+|-----------|------|------|-----|
+| #11410 | cline/cline | ~63k | https://github.com/cline/cline/discussions/11410 |
+| #7604  | oobabooga/text-generation-webui | ~47k | https://github.com/oobabooga/textgen/discussions/7604 |
+| #2804  | koekeishiya/yabai | ~29k | https://github.com/asmvik/yabai/discussions/2804 |
+| #825   | FelixKratz/SketchyBar | ~12k | https://github.com/FelixKratz/SketchyBar/discussions/825 |
+| #4666  | LunarVim/LunarVim | ~19k | https://github.com/LunarVim/LunarVim/discussions/4666 |
+| #2885  | AstroNvim/AstroNvim | ~14k | https://github.com/AstroNvim/AstroNvim/discussions/2885 |
+| #10950 | python-poetry/poetry | ~34k | https://github.com/orgs/python-poetry/discussions/10950 |
+| #1216  | lsd-rs/lsd | ~16k | https://github.com/orgs/lsd-rs/discussions/1216 |
+| #2083  | ClementTsang/bottom | ~13k | https://github.com/ClementTsang/bottom/discussions/2083 |
+
+### Round 19（2026-06-10，5 条）
+
+| Discussion | Repo | 星数 | URL |
+|-----------|------|------|-----|
+| #12979 | ghostty-org/ghostty | ~56k | https://github.com/ghostty-org/ghostty/discussions/12979 |
+| #2027  | mckaywrigley/chatbot-ui | ~33k | https://github.com/mckaywrigley/chatbot-ui/discussions/2027 |
+| #14164 | gitbutlerapp/gitbutler | ~21k | https://github.com/gitbutlerapp/gitbutler/discussions/14164 |
+| #1766  | o2sh/onefetch | ~12k | https://github.com/o2sh/onefetch/discussions/1766 |
+| #582   | bootandy/dust | ~12k | https://github.com/bootandy/dust/discussions/582 |
+
+### Round 20（2026-06-10，8 条）
+
+| Discussion | Repo | 星数 | URL |
+|-----------|------|------|-----|
+| #173   | ibraheemdev/modern-unix | ~33k | https://github.com/ibraheemdev/modern-unix/discussions/173 |
+| #14064 | microsoft/semantic-kernel | ~28k | https://github.com/microsoft/semantic-kernel/discussions/14064 |
+| #10829 | aquasecurity/trivy | ~36k | https://github.com/aquasecurity/trivy/discussions/10829 |
+| #10604 | biomejs/biome | ~25k | https://github.com/biomejs/biome/discussions/10604 |
+| #11576 | deepset-ai/haystack | ~26k | https://github.com/deepset-ai/haystack/discussions/11576 |
+| #1559  | orhun/git-cliff | ~12k | https://github.com/orhun/git-cliff/discussions/1559 |
+| #7951  | jupyter/notebook | ~13k | https://github.com/jupyter/notebook/discussions/7951 |
+| #22660 | vitejs/vite | ~81k | https://github.com/vitejs/vite/discussions/22660 |
+
+### X/Twitter Thread 3（2026-06-10，targeting Claude Code users）
+https://x.com/jianshuo/status/2064718004215230716
+
 ---
 
 ## 待完成（需要人工操作）
