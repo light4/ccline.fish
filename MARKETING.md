@@ -312,3 +312,35 @@ gh api /repos/jianshuo/ccline --jq '.stargazers_count'
 | #10948 | python-poetry/poetry | ~34k | https://github.com/orgs/python-poetry/discussions/10948 |
 | #6682  | pypa/pipenv | ~25k | https://github.com/pypa/pipenv/discussions/6682 |
 | #1838  | pypa/pipx | ~13k | https://github.com/pypa/pipx/discussions/1838 |
+
+### Round 4 — 2026-06-10（数据库 CLI + 系统监控 + dotfiles）
+
+| Discussion | Repo | 星数 | 分类 | 链接 |
+|-----------|------|------|------|------|
+| #1604 | dbcli/pgcli | ~13k | Show and tell | https://github.com/dbcli/pgcli/discussions/1604 |
+| #1930 | dbcli/mycli | ~12k | Show and tell | https://github.com/dbcli/mycli/discussions/1930 |
+| #259  | dbcli/litecli | ~3k | Show and tell | https://github.com/dbcli/litecli/discussions/259 |
+| #1705 | aristocratos/btop | ~33k | Show and tell | https://github.com/aristocratos/btop/discussions/1705 |
+| #2082 | ClementTsang/bottom | ~13k | General | https://github.com/ClementTsang/bottom/discussions/2082 |
+| #1651 | rbenv/rbenv | ~17k | Show and tell | https://github.com/rbenv/rbenv/discussions/1651 |
+| #866  | marlonrichert/zsh-autocomplete | ~7k | Show and tell | https://github.com/marlonrichert/zsh-autocomplete/discussions/866 |
+| #1271 | chubin/wttr.in | ~30k | Show and tell | https://github.com/chubin/wttr.in/discussions/1271 |
+| #1543 | sdkman/sdkman-cli | ~7k | Show and tell | https://github.com/sdkman/sdkman-cli/discussions/1543 |
+
+### Round 5 — 2026-06-10（CLI 框架 + macOS 工具 + Git 工具）
+
+| Discussion | Repo | 星数 | 分类 | 链接 |
+|-----------|------|------|------|------|
+| #2134 | spf13/viper | ~30k | Show and tell | https://github.com/spf13/viper/discussions/2134 |
+| #2803 | koekeishiya/yabai | ~29k | Show and tell | https://github.com/asmvik/yabai/discussions/2803 |
+| #2364 | urfave/cli | ~24k | General | https://github.com/urfave/cli/discussions/2364 |
+| #2395 | fastfetch-cli/fastfetch | ~23k | Show and tell | https://github.com/fastfetch-cli/fastfetch/discussions/2395 |
+| #865  | bee-san/Ciphey | ~21k | Show and tell | https://github.com/bee-san/Ciphey/discussions/865 |
+| #1833 | tiangolo/typer | ~20k | Show and tell | https://github.com/fastapi/typer/discussions/1833 |
+| #10393 | aws/aws-cli | ~17k | General | https://github.com/aws/aws-cli/discussions/10393 |
+| #1867 | ianyh/amethyst | ~16k | Show and tell | https://github.com/ianyh/Amethyst/discussions/1867 |
+| #1765 | o2sh/onefetch | ~12k | Show and tell | https://github.com/o2sh/onefetch/discussions/1765 |
+| #1347 | mvdan/sh | ~9k | Show and tell | https://github.com/mvdan/sh/discussions/1347 |
+| #2052 | nvim-neo-tree/neo-tree.nvim | ~5k | Show and tell | https://github.com/nvim-neo-tree/neo-tree.nvim/discussions/2052 |
+| #1679 | arxanas/git-branchless | ~4k | Show and tell | https://github.com/arxanas/git-branchless/discussions/1679 |
+| #3583 | nicolargo/glances | ~33k | Show and tell | https://github.com/nicolargo/glances/discussions/3583 |
