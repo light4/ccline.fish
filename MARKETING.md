@@ -220,6 +220,32 @@
 ### X/Twitter Thread 3（2026-06-10，targeting Claude Code users）
 https://x.com/jianshuo/status/2064718004215230716
 
+### Round 21（2026-06-10，8 条）
+
+| Discussion | Repo | 星数 | URL |
+|-----------|------|------|-----|
+| #15728 | tiangolo/fastapi | ~99k | https://github.com/fastapi/fastapi/discussions/15728 |
+| #21925 | run-llama/llama_index | ~50k | https://github.com/run-llama/llama_index/discussions/21925 |
+| #2396  | microsoft/graphrag | ~34k | https://github.com/microsoft/graphrag/discussions/2396 |
+| #1588  | abiosoft/colima | ~29k | https://github.com/abiosoft/colima/discussions/1588 |
+| #14207 | k3s-io/k3s | ~33k | https://github.com/k3s-io/k3s/discussions/14207 |
+| #1803  | assafelovic/gpt-researcher | ~28k | https://github.com/assafelovic/gpt-researcher/discussions/1803 |
+| #1053  | watchexec/watchexec | ~7k | https://github.com/watchexec/watchexec/discussions/1053 |
+| #1085  | lotabout/skim | ~7k | https://github.com/skim-rs/skim/discussions/1085 |
+
+### Round 22（2026-06-10，8 条）
+
+| Discussion | Repo | 星数 | URL |
+|-----------|------|------|-----|
+| #7837  | mermaid-js/mermaid | ~89k | https://github.com/orgs/mermaid-js/discussions/7837 |
+| #20215 | tailwindlabs/tailwindcss | ~95k | https://github.com/tailwindlabs/tailwindcss/discussions/20215 |
+| #10916 | shadcn-ui/ui | ~116k | https://github.com/shadcn-ui/ui/discussions/10916 |
+| #41284 | dbeaver/dbeaver | ~50k | https://github.com/orgs/dbeaver/discussions/41284 |
+| #2765  | terrastruct/d2 | ~24k | https://github.com/terrastruct/d2/discussions/2765 |
+| #1839  | pypa/pipx | ~13k | https://github.com/pypa/pipx/discussions/1839 |
+| #6777  | fastify/fastify | ~36k | https://github.com/fastify/fastify/discussions/6777 |
+| #10394 | aws/aws-cli | ~17k | https://github.com/aws/aws-cli/discussions/10394 |
+
 ---
 
 ## 待完成（需要人工操作）
