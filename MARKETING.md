@@ -246,6 +246,20 @@ https://x.com/jianshuo/status/2064718004215230716
 | #6777  | fastify/fastify | ~36k | https://github.com/fastify/fastify/discussions/6777 |
 | #10394 | aws/aws-cli | ~17k | https://github.com/aws/aws-cli/discussions/10394 |
 
+### Round 23（2026-06-10，9 条）
+
+| Discussion | Repo | 星数 | URL |
+|-----------|------|------|-----|
+| #18411  | sveltejs/svelte | ~87k | https://github.com/sveltejs/svelte/discussions/18411 |
+| #7310   | expressjs/express | ~69k | https://github.com/expressjs/express/discussions/7310 |
+| #35332  | nuxt/nuxt | ~60k | https://github.com/nuxt/nuxt/discussions/35332 |
+| #15325  | redis/redis | ~75k | https://github.com/redis/redis/discussions/15325 |
+| #106983 | ClickHouse/ClickHouse | ~48k | https://github.com/ClickHouse/ClickHouse/discussions/106983 |
+| #10912  | tanstack/query | ~50k | https://github.com/TanStack/query/discussions/10912 |
+| #29633  | prisma/prisma | ~46k | https://github.com/prisma/prisma/discussions/29633 |
+| #13912  | huggingface/diffusers | ~34k | https://github.com/huggingface/diffusers/discussions/13912 |
+| #3214   | alibaba/arthas | ~37k | https://github.com/alibaba/arthas/discussions/3214 |
+
 ---
 
 ## 待完成（需要人工操作）
