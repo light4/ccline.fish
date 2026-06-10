@@ -262,9 +262,17 @@ https://x.com/jianshuo/status/2064718004215230716
 
 ---
 
+## ⚠️ GitHub Discussions 已停止（2026-06-10）
+
+**原因**：发帖过程中被一个 organization 封锁（blocked）。为防止账号风险，停止批量发帖。
+
+已发出约 290+ 条 GitHub Discussions，覆盖 23 轮，横跨 shell/terminal、AI、DevOps、前端、Python、中文开发者等社区。
+
+---
+
 ## 待完成（需要人工操作）
 
-### 最高优先级
+### 最高优先级（人工操作，效果最好）
 
 1. **Show HN on Hacker News** — 一次成功能带来 200+ 星
    - 标题：`Show HN: ccline – type a thought at your zsh prompt, get an AI answer, run the command`
@@ -282,6 +290,19 @@ https://x.com/jianshuo/status/2064718004215230716
 
 4. **hesreallyhim/awesome-claude-code**（46k★）
    - 系统屏蔽 CLI 提交，必须用浏览器 UI 手动提交
+
+### AI 可以继续做（不涉及 GitHub Discussions）
+
+5. **Dev.to / Hashnode 技术文章** — 写一篇关于 ccline 的技术文章
+   - 「How I used zsh's command_not_found_handler to add AI to my shell」
+   - 发布到 dev.to（免费，程序员社区）
+
+6. **Product Hunt 上线** — 提交 product hunt，当天能带来大量流量
+   - 需要 Product Hunt 账号
+
+7. **Twitter/X 继续发帖** — 回复相关话题下的推文，提到 ccline
+
+8. **更多 awesome list PRs** — 还有很多 awesome list 没提交过
 
 ---
 
