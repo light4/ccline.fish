@@ -66,20 +66,32 @@ installed; otherwise a built-in `perl` renderer (no extra dependency).
 
 ## Install
 
-One line:
+**Homebrew** (recommended for macOS):
+
+```sh
+brew install jianshuo/tap/ccline
+```
+
+Then add to `~/.zshrc`:
+
+```sh
+source $(brew --prefix)/share/ccline/ccline.zsh
+```
+
+**One-line install script**:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/jianshuo/ccline/v0.2.2/install.sh | bash
 ```
 
-Or from a clone:
+**From a clone**:
 
 ```sh
 git clone https://github.com/jianshuo/ccline.git
 cd ccline && ./install.sh
 ```
 
-Either way it puts `ccline` in `~/.local/bin`, `ccline.zsh` in `~/.config/ccline/`,
+The install script puts `ccline` in `~/.local/bin`, `ccline.zsh` in `~/.config/ccline/`,
 and adds one `source` line to your `~/.zshrc`. Re-running it is safe. Then open a
 new terminal (or `source ~/.zshrc`).
 
