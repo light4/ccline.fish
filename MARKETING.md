@@ -437,3 +437,14 @@ gh api /repos/jianshuo/ccline --jq '.stargazers_count'
 | #1587  | abiosoft/colima | ~29k | https://github.com/abiosoft/colima/discussions/1587 |
 | #3334  | pmndrs/jotai | ~21k | https://github.com/pmndrs/jotai/discussions/3334 |
 | #10565 | vitest-dev/vitest | ~17k | https://github.com/vitest-dev/vitest/discussions/10565 |
+
+### Round 12 — 2026-06-10（API工具 + 全栈框架 + 桌面应用）
+
+| Discussion | Repo | 星数 | 链接 |
+|-----------|------|------|------|
+| #6417  | hoppscotch/hoppscotch | ~79k | https://github.com/hoppscotch/hoppscotch/discussions/6417 |
+| #34051 | cypress-io/cypress | ~50k | https://github.com/cypress-io/cypress/discussions/34051 |
+| #7409  | trpc/trpc | ~40k | https://github.com/trpc/trpc/discussions/7409 |
+| #11538 | remix-run/remix | ~33k | https://github.com/remix-run/remix/discussions/11538 |
+| #8594  | squidfunk/mkdocs-material | ~27k | https://github.com/squidfunk/mkdocs-material/discussions/8594 |
+| #1773  | neutralinojs/neutralinojs | ~9k | https://github.com/neutralinojs/neutralinojs/discussions/1773 |
