@@ -107,6 +107,38 @@
 | #2961 | gitui-org/gitui | ~22k | Show and tell | https://github.com/gitui-org/gitui/discussions/2961 |
 | #2172 | dandavison/delta | ~31k | Show and tell | https://github.com/dandavison/delta/discussions/2172 |
 | #10127 | kovidgoyal/kitty | ~33k | Show and tell | https://github.com/kovidgoyal/kitty/discussions/10127 |
+| #20310 | microsoft/terminal | ~104k | Show and tell | https://github.com/microsoft/terminal/discussions/20310 |
+| #11343 | Eugeny/tabby | ~72k | General | https://github.com/Eugeny/tabby/discussions/11343 |
+| #5151  | termux/termux-app | ~56k | Show and tell | https://github.com/termux/termux-app/discussions/5151 |
+| #1680  | lencx/ChatGPT | ~54k | Show and tell | https://github.com/lencx/ChatGPT/discussions/1680 |
+| #27586 | PowerShell/PowerShell | ~54k | Show and tell | https://github.com/PowerShell/PowerShell/discussions/27586 |
+| #1340  | khoj-ai/khoj | ~35k | Show and tell | https://github.com/khoj-ai/khoj/discussions/1340 |
+| #3915  | lapce/lapce | ~39k | Show and tell | https://github.com/lapce/lapce/discussions/3915 |
+| #59015 | zed-industries/zed | ~85k | Show and tell | https://github.com/zed-industries/zed/discussions/59015 |
+| #25902 | open-webui/open-webui | ~141k | Show and tell | https://github.com/open-webui/open-webui/discussions/25902 |
+| #6802  | ChatGPTNextWeb/NextChat | ~88k | Show and tell | https://github.com/ChatGPTNextWeb/NextChat/discussions/6802 |
+| #2287  | binary-husky/gpt_academic | ~71k | Show and tell | https://github.com/binary-husky/gpt_academic/discussions/2287 |
+| #15644 | lobehub/lobehub | ~78k | General | https://github.com/lobehub/lobehub/discussions/15644 |
+| #554   | PlexPt/awesome-chatgpt-prompts-zh | ~61k | Show and tell | https://github.com/PlexPt/awesome-chatgpt-prompts-zh/discussions/554 |
+| #37279 | langgenius/dify | ~145k | Show and tell | https://github.com/langgenius/dify/discussions/37279 |
+| #13594 | langflow-ai/langflow | ~149k | Show and tell | https://github.com/langflow-ai/langflow/discussions/13594 |
+| #2101  | microsoft/markitdown | ~150k | Show and tell | https://github.com/microsoft/markitdown/discussions/2101 |
+| #7820  | microsoft/autogen | ~59k | Show and tell | https://github.com/microsoft/autogen/discussions/7820 |
+| #5466  | mem0ai/mem0 | ~58k | Show and tell | https://github.com/mem0ai/mem0/discussions/5466 |
+| #10561 | hiyouga/LlamaFactory | ~72k | Show and tell | https://github.com/hiyouga/LlamaFactory/discussions/10561 |
+| #6501  | FlowiseAI/Flowise | ~53k | Show and tell | https://github.com/FlowiseAI/Flowise/discussions/6501 |
+| #6110  | nektos/act | ~71k | Show and tell | https://github.com/nektos/act/discussions/6110 |
+| #1815  | CorentinTh/it-tools | ~39k | Show and tell | https://github.com/CorentinTh/it-tools/discussions/1815 |
+| #4611  | Dokploy/dokploy | ~35k | Show and tell | https://github.com/Dokploy/dokploy/discussions/4611 |
+| #8750  | dokku/dokku | ~32k | Show and tell | https://github.com/dokku/dokku/discussions/8750 |
+| #541   | MichaelCade/90DaysOfDevOps | ~29k | Show and tell | https://github.com/MichaelCade/90DaysOfDevOps/discussions/541 |
+| #3408  | NvChad/NvChad | ~28k | Show and tell | https://github.com/NvChad/NvChad/discussions/3408 |
+| #2192  | lissy93/dashy | ~25k | General | https://github.com/lissy93/dashy/discussions/2192 |
+| #1265  | mas-cli/mas | ~12k | Show and tell | https://github.com/mas-cli/mas/discussions/1265 |
+| #9456  | nix-community/home-manager | ~10k | Show and tell | https://github.com/nix-community/home-manager/discussions/9456 |
+| #973   | Caldis/Mos | ~20k | Show and tell | https://github.com/Caldis/Mos/discussions/973 |
+| #3873  | Hammerspoon/hammerspoon | ~15k | Show and tell | https://github.com/Hammerspoon/hammerspoon/discussions/3873 |
+| #13627 | cli/cli | ~44k | Show and tell | https://github.com/cli/cli/discussions/13627 |
 
 ## 已完成：其他渠道
 
@@ -118,6 +150,7 @@
 | jianshuo.dev 首页 | 重新设计，ccline 放主位 | 完成 |
 | GitHub topics | 已扩充到 14 个 | 完成 |
 | 落地页 OG/Twitter Card | 已添加 meta tags，部署到 ccline.jianshuo.dev | 完成 |
+| X/Twitter 推文串 | 3 条推文，介绍 ccline 功能 + 安装方法 | 2026-06-10 |
 
 ---
 
