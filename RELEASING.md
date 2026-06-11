@@ -13,7 +13,7 @@ That script:
 
 1. Validates the version (`vX.Y.Z`) and checks preconditions — clean working
    tree, the tag doesn't already exist, and `tests/test_ccline.fish` passes.
-2. Bumps the pinned version in `install.sh` (the `REF` default) and `README.md`
+2. Bumps the pinned version in `install.fish` (the `REF` default) and `README.md`
    (the one-liner URL).
 3. Commits and pushes `main`.
 4. Creates and pushes the git tag.
@@ -28,7 +28,7 @@ If you'd rather do it by hand (current version is `$CUR`, new is `$NEW`):
 
 ```sh
 # 1. bump both references
-perl -i -pe 's/\Q$CUR\E/$NEW/g' install.sh README.md
+perl -i -pe 's/\Q$CUR\E/$NEW/g' install.fish README.md
 
 # 2. commit + push
 git add -A && git commit -m "Release $NEW" && git push origin main

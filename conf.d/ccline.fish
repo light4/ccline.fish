@@ -1,7 +1,7 @@
 # ccline — fish_command_not_found handler.
 #
 # Auto-loaded by fish from ~/.config/fish/conf.d/ when installed via fisher
-# (or install.sh). When you type something that isn't a real command, fish
+# (or install.fish). When you type something that isn't a real command, fish
 # calls this. A single unknown word is treated as a normal typo (the usual
 # "Unknown command"). Two or more words are treated as a thought and routed
 # to the `ccline` function (defined lazily in functions/ccline.fish).

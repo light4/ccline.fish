@@ -74,15 +74,15 @@ fisher install light4/ccline.fish
 
 **One-line install script** (no Fisher required):
 
-```sh
-curl -fsSL https://raw.githubusercontent.com/light4/ccline.fish/main/install.sh | bash
+```fish
+curl -fsSL https://raw.githubusercontent.com/light4/ccline.fish/main/install.fish | source
 ```
 
 **From a clone**:
 
 ```sh
 git clone https://github.com/light4/ccline.fish.git
-cd ccline.fish && ./install.sh
+cd ccline.fish; and ./install.fish
 ```
 
 All three put the same two files in place:
