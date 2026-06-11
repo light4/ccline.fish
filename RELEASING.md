@@ -6,7 +6,7 @@ bumping that pinned version everywhere and publishing a new tag.
 ## The easy way
 
 ```sh
-./release.sh v0.2.0 "What changed in this release."
+./release.fish v0.2.0 "What changed in this release."
 ```
 
 That script:
