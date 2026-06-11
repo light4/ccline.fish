@@ -1,6 +1,6 @@
 Output "/Users/jianshuo/code/ccline/docs/demo.gif"
 
-Set Shell zsh
+Set Shell fish
 Set FontSize 18
 Set Width 1100
 Set Height 560
@@ -9,13 +9,13 @@ Set Theme "Catppuccin Mocha"
 Set TypingSpeed 60ms
 Set PlaybackSpeed 1.0
 
-# --- hidden setup: stub claude + real ccline on PATH, load the zsh handler ---
+# --- hidden setup: stub claude + real ccline on PATH, load the fish handler ---
 Hide
-Type "export PATH=/tmp/ccline-demo-bin:$HOME/.local/bin:$PATH"
+Type "set -gx PATH /tmp/ccline-demo-bin $HOME/.local/bin $PATH"
 Enter
-Type "source $HOME/.config/ccline/ccline.zsh"
+Type "source $HOME/.config/fish/conf.d/ccline.fish"
 Enter
-Type "cd /tmp/ccline-demo && clear"
+Type "cd /tmp/ccline-demo; and clear"
 Enter
 Show
 

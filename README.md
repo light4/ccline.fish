@@ -1,9 +1,9 @@
-# ccline
+# ccline (fish edition)
 
-[![GitHub stars](https://img.shields.io/github/stars/jianshuo/ccline?style=flat-square)](https://github.com/jianshuo/ccline/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/jianshuo/ccline.fish?style=flat-square)](https://github.com/jianshuo/ccline.fish/stargazers)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
-Type a thought directly at your shell prompt — no command, no prefix — and get
+Type a thought directly at your fish prompt — no command, no prefix — and get
 an answer. If the answer contains shell commands, confirm once and run them.
 
 ![ccline demo](docs/demo.gif)
@@ -36,14 +36,14 @@ You're in the terminal and need to remember a command. Your options:
 
 With ccline: just type the question where you already are. The answer appears
 inline, and if there's a runnable command, one keypress executes it in your live
-shell — `cd`, `export`, history and all.
+fish session — `cd`, `set`, abbreviations, history and all.
 
 ## How it works
 
-It hijacks zsh's `command_not_found_handler`. When you type something that
-isn't a real command, zsh hands the whole line to ccline:
+It hijacks fish's `fish_command_not_found`. When you type something that
+isn't a real command, fish hands the whole line to ccline:
 
-- **One word** (`gti`) → treated as a normal typo: `zsh: command not found: gti`.
+- **One word** (`gti`) → treated as a normal typo: `fish: Unknown command: gti`.
 - **Two or more words** → treated as a thought, sent to your LLM CLI. The answer
   is rendered as Markdown. Any runnable commands are shown in an arrow-key menu —
   **↑/↓** to move, **Enter** to run the highlighted command (or "Run all of
@@ -59,41 +59,30 @@ installed; otherwise a built-in `perl` renderer (no extra dependency).
 
 ## Requirements
 
-- zsh (the macOS default shell)
+- [fish](https://fishshell.com) 3.1 or newer
 - One of these on your `PATH`, authenticated:
   - [`claude`](https://claude.com/claude-code) (preferred), or
   - [`codex`](https://github.com/openai/codex) (fallback)
 
 ## Install
 
-**Homebrew** (recommended for macOS):
-
-```sh
-brew install jianshuo/tap/ccline
-```
-
-Then add to `~/.zshrc`:
-
-```sh
-source $(brew --prefix)/share/ccline/ccline.zsh
-```
-
 **One-line install script**:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/jianshuo/ccline/v0.2.2/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/jianshuo/ccline.fish/main/install.sh | bash
 ```
 
 **From a clone**:
 
 ```sh
-git clone https://github.com/jianshuo/ccline.git
-cd ccline && ./install.sh
+git clone https://github.com/jianshuo/ccline.fish.git
+cd ccline.fish && ./install.sh
 ```
 
-The install script puts `ccline` in `~/.local/bin`, `ccline.zsh` in `~/.config/ccline/`,
-and adds one `source` line to your `~/.zshrc`. Re-running it is safe. Then open a
-new terminal (or `source ~/.zshrc`).
+The install script puts `ccline` in `~/.local/bin` and `ccline.fish` in
+`~/.config/fish/conf.d/` — fish auto-loads everything in `conf.d/`, so no
+edits to `config.fish` are needed. Re-running is safe. Then open a new fish
+session.
 
 ## Configuration
 
@@ -101,35 +90,32 @@ new terminal (or `source ~/.zshrc`).
   auto-detect (claude preferred, codex fallback).
 - `CCLINE_MODEL` — override the model. The claude backend defaults to
   `claude-sonnet-4-6` (fastest end-to-end for these short prompts); set this to
-  use another, e.g. `export CCLINE_MODEL=claude-opus-4-8`. Passed as `--model`
+  use another, e.g. `set -gx CCLINE_MODEL claude-opus-4-8`. Passed as `--model`
   to whichever backend is used.
 
 ## Running commands
 
 When you trigger ccline by typing at the prompt (the normal path), the chosen
-command runs in **your live shell** — so `cd`, `export`, aliases, functions, and
-history all work and persist, exactly as if you'd typed it. (ccline writes the
-selection to a temp file and the zsh handler `eval`s it.)
+command runs in **your live fish session** — so `cd`, `set`, abbreviations,
+functions, and history all work and persist, exactly as if you'd typed it.
+(ccline writes the selection to a temp file and the fish handler `eval`s it.)
 
 Running `ccline …` directly as a command instead runs the selection in a
 subprocess, so shell-state changes like `cd` won't persist there.
 
-## Limitations (v1)
+## Limitations
 
-- A bare `*` in a thought can glob-expand against the current directory. (A
-  trailing `?` is handled — the integration sets `no_nomatch`.)
 - Single-word thoughts won't reach Claude — by design, so typos stay fast.
 
 ## Uninstall
 
 ```sh
 rm -f ~/.local/bin/ccline
-rm -rf ~/.config/ccline
+rm -f ~/.config/fish/conf.d/ccline.fish
 ```
-Then remove the `# ccline` block from `~/.zshrc`.
 
 ## Tests
 
 ```sh
-bash tests/test_ccline.sh
+fish tests/test_ccline.fish
 ```

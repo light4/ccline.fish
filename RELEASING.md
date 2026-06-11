@@ -12,7 +12,7 @@ bumping that pinned version everywhere and publishing a new tag.
 That script:
 
 1. Validates the version (`vX.Y.Z`) and checks preconditions — clean working
-   tree, the tag doesn't already exist, and `tests/test_ccline.sh` passes.
+   tree, the tag doesn't already exist, and `tests/test_ccline.fish` passes.
 2. Bumps the pinned version in `install.sh` (the `REF` default) and `README.md`
    (the one-liner URL).
 3. Commits and pushes `main`.
@@ -50,4 +50,4 @@ gh release create "$NEW" --title "ccline $NEW" --notes "…"
   Users who want the latest dev build can override with
   `CCLINE_REF=main`.
 - **Requirements to release:** `gh` authenticated, push access to
-  `jianshuo/ccline`, `perl` (ships with macOS).
+  `jianshuo/ccline.fish`, `fish` and `perl` on PATH.

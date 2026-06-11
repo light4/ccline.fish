@@ -1,344 +1,364 @@
-#!/usr/bin/env bash
+#!/usr/bin/env fish
 #
-# ccline — type a thought at your shell, get an answer.
+# ccline — type a thought at your fish prompt, get an answer.
 #
-# This is the helper invoked by command_not_found_handler (see ccline.zsh).
-# It sends the thought to the `claude` CLI, prints the answer, and offers to
-# run any shell commands the answer contains.
+# This is the helper invoked by fish_command_not_found (see ccline.fish).
+# It sends the thought to the `claude` CLI (or `codex` as fallback), prints the
+# answer, and offers to run any shell commands the answer contains.
 #
 # It can also be sourced (tests do this) without running main(): the dispatch
-# at the bottom only runs when the file is executed directly.
-
-set -uo pipefail
+# at the bottom only runs when __CCLINE_LIB is unset.
 
 # Optional model override, e.g. CCLINE_MODEL=claude-haiku-4-5-20251001
-CCLINE_MODEL="${CCLINE_MODEL:-}"
+set -q CCLINE_MODEL; or set -gx CCLINE_MODEL ""
 
-ccline_system_prompt() {
-  cat <<'EOF'
-You are a command-line assistant answering a quick question typed directly at a
-macOS zsh prompt. Be concise — a few sentences at most. If your answer involves
+function ccline_system_prompt
+    echo 'You are a command-line assistant answering a quick question typed directly at a
+macOS fish prompt. Be concise — a few sentences at most. If your answer involves
 shell commands the user can run, put each runnable command in its own fenced
 ```bash code block. Never put example output, file contents, or non-runnable
 snippets in a bash/sh/shell block. Prefer safe, non-destructive commands; if a
-command is destructive, say so plainly.
-EOF
-}
+command is destructive, say so plainly.'
+end
 
 # Decide which LLM CLI to use. claude takes precedence; codex is the fallback.
 # CCLINE_BACKEND=claude|codex forces a choice (if that CLI is installed).
-ccline_backend() {
-  if [ -n "${CCLINE_BACKEND:-}" ] && command -v "$CCLINE_BACKEND" >/dev/null 2>&1; then
-    echo "$CCLINE_BACKEND"
-    return 0
-  fi
-  if command -v claude >/dev/null 2>&1; then
-    echo claude
-  elif command -v codex >/dev/null 2>&1; then
-    echo codex
-  fi
-}
+function ccline_backend
+    if test -n "$CCLINE_BACKEND"; and command -q -- "$CCLINE_BACKEND"
+        echo "$CCLINE_BACKEND"
+        return 0
+    end
+    if command -q claude
+        echo claude
+    else if command -q codex
+        echo codex
+    end
+end
 
 # Ask via the claude CLI. Clean, isolated call: no default agent prompt, tools,
 # settings, or MCP. Echoes the answer; returns claude's exit status.
-ccline_ask_claude() {
-  local prompt="$1" sys="$2"
-  # Sonnet 4.6 by default: fastest end-to-end for these short prompts and plenty
-  # capable. Override with CCLINE_MODEL.
-  local model="${CCLINE_MODEL:-claude-sonnet-4-6}"
-  claude -p \
-    --system-prompt "$sys" \
-    --tools "" \
-    --setting-sources "" \
-    --strict-mcp-config \
-    --output-format text \
-    --model "$model" \
-    "$prompt"
-}
+function ccline_ask_claude
+    set -l prompt $argv[1]
+    set -l sys $argv[2]
+    # Sonnet 4.6 by default: fastest end-to-end for these short prompts and
+    # plenty capable. Override with CCLINE_MODEL.
+    set -l model claude-sonnet-4-6
+    test -n "$CCLINE_MODEL"; and set model $CCLINE_MODEL
+    claude -p \
+        --system-prompt "$sys" \
+        --tools "" \
+        --setting-sources "" \
+        --strict-mcp-config \
+        --output-format text \
+        --model "$model" \
+        "$prompt"
+end
 
 # Ask via the codex CLI. codex exec has no system-prompt flag, so the formatting
 # instructions are prepended to the prompt. read-only sandbox so it can't change
 # anything while answering; -o captures just the final message.
-ccline_ask_codex() {
-  local prompt="$1" sys="$2"
-  local model_args=()
-  [ -n "${CCLINE_MODEL:-}" ] && model_args=(--model "$CCLINE_MODEL")
-  local out rc
-  out="$(mktemp)"
-  printf '%s\n\nQuestion: %s\n' "$sys" "$prompt" \
-    | codex exec \
-        --sandbox read-only \
-        --skip-git-repo-check \
-        --color never \
-        ${model_args[@]+"${model_args[@]}"} \
-        -o "$out" - > /dev/null 2>&1
-  rc=$?
-  cat "$out" 2>/dev/null
-  rm -f "$out"
-  return "$rc"
-}
+function ccline_ask_codex
+    set -l prompt $argv[1]
+    set -l sys $argv[2]
+    set -l model_args
+    test -n "$CCLINE_MODEL"; and set model_args --model $CCLINE_MODEL
+    set -l out (mktemp)
+    printf '%s\n\nQuestion: %s\n' "$sys" "$prompt" \
+        | codex exec \
+            --sandbox read-only \
+            --skip-git-repo-check \
+            --color never \
+            $model_args \
+            -o "$out" - >/dev/null 2>&1
+    set -l rc $status
+    cat "$out" 2>/dev/null
+    rm -f "$out"
+    return $rc
+end
 
 # Read an answer on stdin, print the lines that live inside ```bash / ```sh /
 # ```shell fenced blocks (one line per command, order preserved).
-ccline_extract_commands() {
-  awk '
-    /^[[:space:]]*```/ {
-      if (infence) { infence = 0; next }
-      info = $0
-      sub(/^[[:space:]]*```/, "", info)
-      gsub(/[[:space:]]/, "", info)
-      info = tolower(info)
-      if (info == "bash" || info == "sh" || info == "shell") infence = 1
-      next
-    }
-    infence { print }
-  '
-}
+function ccline_extract_commands
+    awk '
+        /^[[:space:]]*```/ {
+            if (infence) { infence = 0; next }
+            info = $0
+            sub(/^[[:space:]]*```/, "", info)
+            gsub(/[[:space:]]/, "", info)
+            info = tolower(info)
+            if (info == "bash" || info == "sh" || info == "shell") infence = 1
+            next
+        }
+        infence { print }
+    '
+end
 
 # Keep only runnable lines: drop blank lines and comment-only lines.
-ccline_runnable_lines() {
-  grep -vE '^[[:space:]]*($|#)' || true
-}
+function ccline_runnable_lines
+    grep -vE '^[[:space:]]*($|#)'; or true
+end
 
-# Render Markdown on stdin to ANSI for terminal display. Falls back to raw
-# output if there is a glow binary (preferred) or, finally, plain text.
-ccline_render() {
-  if command -v glow >/dev/null 2>&1; then
-    glow - 2>/dev/null && return 0
-  fi
-  perl -e '
-    my $in = 0;
-    my ($B,$D,$C,$G,$I,$R) = ("\e[1m","\e[2m","\e[36m","\e[32m","\e[3m","\e[0m");
-    while (my $l = <STDIN>) {
-      chomp $l;
-      if ($l =~ /^\s*```/) { $in = !$in; next; }   # hide fence markers
-      if ($in)             { print "${G}    $l${R}\n"; next; }  # code: green, indented
-      if ($l =~ /^(#{1,6})\s+(.*)/) { print "${B}$2${R}\n"; next; }   # heading
-      $l =~ s/^(\s*)[-*]\s+/$1• /;                 # bullets
-      $l =~ s/`([^`]+)`/${C}$1${R}/g;              # inline code
-      $l =~ s/\*\*([^*]+)\*\*/${B}$1${R}/g;        # **bold**
-      $l =~ s/(?<!\*)\*([^*]+)\*(?!\*)/${I}$1${R}/g; # *italic*
-      print "$l\n";
-    }
-  '
+# Render Markdown on stdin to ANSI for terminal display. Uses glow if present;
+# otherwise a built-in perl renderer (no extra dependency).
+function ccline_render
+    if command -q glow
+        if glow - 2>/dev/null
+            return 0
+        end
+    end
+    perl -e '
+my $in = 0;
+my ($B,$D,$C,$G,$I,$R) = ("\e[1m","\e[2m","\e[36m","\e[32m","\e[3m","\e[0m");
+while (my $l = <STDIN>) {
+  chomp $l;
+  if ($l =~ /^\s*```/) { $in = !$in; next; }   # hide fence markers
+  if ($in)             { print "${G}    $l${R}\n"; next; }   # code: green, indented
+  if ($l =~ /^(#{1,6})\s+(.*)/) { print "${B}$2${R}\n"; next; }   # heading
+  $l =~ s/^(\s*)[-*]\s+/$1• /;                 # bullets
+  $l =~ s/`([^`]+)`/${C}$1${R}/g;              # inline code
+  $l =~ s/\*\*([^*]+)\*\*/${B}$1${R}/g;        # **bold**
+  $l =~ s/(?<!\*)\*([^*]+)\*(?!\*)/${I}$1${R}/g;  # *italic*
+  print "$l\n";
 }
+'
+end
 
 # A "thinking" animation shown while we wait for the LLM. Cycles a braille
 # spinner next to a label, redrawn in place at ~10fps, dimmed, cursor hidden.
 # Draws ONLY to /dev/tty — never stdout/stderr — because the caller captures the
-# answer via $(...) and any stray bytes would corrupt it. Runs as a background
-# process; the caller kills it and clears the line when the answer arrives.
-ccline_spinner() {
-  local tty=/dev/tty ESC=$'\e'
-  local frames='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏' i=0 n
-  n=${#frames}
-  printf '%s[?25l' "$ESC" > "$tty" 2>/dev/null    # hide cursor
-  while :; do
-    printf '\r%s[2m%s thinking…%s[0m' "$ESC" "${frames:i:1}" "$ESC" > "$tty" 2>/dev/null
-    i=$(( (i + 1) % n ))
-    sleep 0.1
-  done
-}
+# answer via command substitution and any stray bytes would corrupt it.
+function ccline_spinner
+    set -l tty /dev/tty
+    set -l ESC \e
+    set -l frames ⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏
+    set -l n (count $frames)
+    set -l i 1
+    printf '%s[?25l' $ESC >$tty 2>/dev/null    # hide cursor
+    while true
+        printf '\r%s[2m%s thinking…%s[0m' $ESC $frames[$i] $ESC >$tty 2>/dev/null
+        set i (math "($i % $n) + 1")
+        sleep 0.1
+    end
+end
 
 # True when we have an interactive terminal we can read keystrokes from.
-ccline_can_interact() {
-  [ -t 1 ] || return 1
-  ( exec < /dev/tty ) 2>/dev/null || return 1
-  return 0
-}
+function ccline_can_interact
+    isatty stdout; or return 1
+    test -r /dev/tty; or return 1
+    return 0
+end
 
 # Arrow-key menu. Args are the labels. Draws to /dev/tty and echoes the chosen
 # 0-based index to stdout. ↑/↓ (or k/j) move, Enter confirms, q cancels (which
 # selects the last item — callers make that "Cancel").
-ccline_menu() {
-  local -a items=("$@")
-  local n="${#items[@]}"
-  local sel=0 ESC=$'\e' tty=/dev/tty i key rest first=1
-  local UP="${ESC}[A" DOWN="${ESC}[B" NL=$'\n' CR=$'\r'
+function ccline_menu
+    set -l items $argv
+    set -l n (count $items)
+    set -l sel 1                                   # fish is 1-indexed internally
+    set -l ESC \e
+    set -l UP $ESC"[A"
+    set -l DOWN $ESC"[B"
+    set -l tty /dev/tty
 
-  local saved
-  saved="$(stty -g < "$tty" 2>/dev/null)"
-  stty -echo -icanon min 1 time 0 < "$tty" 2>/dev/null    # raw, no echo
-  printf '%s[?25l' "$ESC" > "$tty"                        # hide cursor
-  trap 'stty "$saved" < "$tty" 2>/dev/null; printf "%s[?25h" "$ESC" > "$tty" 2>/dev/null; trap - INT; kill -INT $$' INT
+    set -l saved (stty -g <$tty 2>/dev/null)
+    stty -echo -icanon min 1 time 0 <$tty 2>/dev/null   # raw, no echo
+    printf '%s[?25l' $ESC >$tty                          # hide cursor
 
-  while :; do
-    if [ "$first" -eq 1 ]; then
-      first=0
+    # Install a signal handler so Ctrl-C restores the terminal cleanly.
+    set -g __ccline_menu_saved $saved
+    function __ccline_menu_int --on-signal INT --inherit-variable __ccline_menu_saved
+        stty $__ccline_menu_saved </dev/tty 2>/dev/null
+        printf '\e[?25h' >/dev/tty 2>/dev/null
+        functions -e __ccline_menu_int
+    end
+
+    set -l first 1
+    while true
+        if test $first -eq 1
+            set first 0
+        else
+            printf '%s[%dA' $ESC $n >$tty               # cursor up n lines
+        end
+        for i in (seq 1 $n)
+            if test $i -eq $sel
+                printf '%s[2K%s[7m ❯ %s %s[0m\n' $ESC $ESC $items[$i] $ESC >$tty
+            else
+                printf '%s[2K   %s\n' $ESC $items[$i] >$tty
+            end
+        end
+
+        set -l key
+        read --nchars 1 --local --raw key <$tty
+        or break
+
+        if test "$key" = $ESC
+            set -l rest
+            read --nchars 2 --local --raw rest <$tty   # consume "[A"/"[B"
+            set key "$key$rest"
+        end
+
+        if test "$key" = $UP; or test "$key" = k; or test "$key" = K
+            set sel (math "(($sel - 2 + $n) % $n) + 1")
+        else if test "$key" = $DOWN; or test "$key" = j; or test "$key" = J
+            set sel (math "($sel % $n) + 1")
+        else if test -z "$key"; or test "$key" = \n; or test "$key" = \r
+            break                                       # Enter
+        else if test "$key" = q; or test "$key" = Q
+            set sel $n                                  # cancel → last item
+            break
+        end
+    end
+
+    printf '%s[?25h' $ESC >$tty                         # show cursor
+    stty $saved <$tty 2>/dev/null                       # restore terminal
+    functions -q __ccline_menu_int; and functions -e __ccline_menu_int
+    set -e __ccline_menu_saved
+    echo (math "$sel - 1")                              # caller wants 0-indexed
+end
+
+function ccline_main
+    if test (count $argv) -eq 0
+        echo "usage: ccline <your thought>" >&2
+        return 2
+    end
+
+    set -l backend (ccline_backend)
+    if test -z "$backend"
+        echo "ccline: no LLM CLI found — install 'claude' (preferred) or 'codex':" >&2
+        echo "  Claude Code: https://claude.com/claude-code" >&2
+        echo "  Codex:       https://github.com/openai/codex" >&2
+        return 127
+    end
+
+    set -l prompt (string join ' ' $argv)
+    set -l sys (ccline_system_prompt | string collect)
+
+    # Show a "thinking" spinner during the blocking LLM call (interactive only).
+    set -l spin_pid
+    if isatty stdout
+        ccline_spinner &
+        set spin_pid $last_pid
+        disown $spin_pid 2>/dev/null
+    end
+
+    set -l answer (ccline_ask_$backend "$prompt" "$sys" | string collect)
+    set -l rc $pipestatus[1]
+
+    if test -n "$spin_pid"
+        kill $spin_pid 2>/dev/null
+        printf '\r\e[K\e[?25h' >/dev/tty 2>/dev/null   # clear line, restore cursor
+        set spin_pid
+    end
+
+    if test $rc -ne 0
+        echo "ccline: $backend exited with status $rc" >&2
+        return $rc
+    end
+
+    set -l trimmed (string trim -- "$answer" | string collect)
+    if test -z "$trimmed"
+        echo "ccline: empty response from $backend" >&2
+        return 1
+    end
+
+    # Render Markdown only when writing to a terminal; raw otherwise.
+    if isatty stdout
+        printf '%s\n' "$answer" | ccline_render
     else
-      printf '%s[%dA' "$ESC" "$n" > "$tty"               # cursor up n lines
-    fi
-    for (( i = 0; i < n; i++ )); do
-      if [ "$i" -eq "$sel" ]; then
-        printf '%s[2K%s[7m ❯ %s %s[0m\n' "$ESC" "$ESC" "${items[i]}" "$ESC" > "$tty"
-      else
-        printf '%s[2K   %s\n' "$ESC" "${items[i]}" > "$tty"
-      fi
-    done
+        printf '%s\n' "$answer"
+    end
 
-    IFS= read -rsn1 key < "$tty" || break
-    if [ "$key" = "$ESC" ]; then
-      IFS= read -rsn2 rest < "$tty"                      # consume "[A"/"[B"
-      key="$key$rest"
-    fi
+    set -l runnable (printf '%s\n' "$answer" | ccline_extract_commands | ccline_runnable_lines)
+    test (count $runnable) -eq 0; and return 0
 
-    if [ "$key" = "$UP" ] || [ "$key" = k ]; then
-      sel=$(( (sel - 1 + n) % n ))
-    elif [ "$key" = "$DOWN" ] || [ "$key" = j ]; then
-      sel=$(( (sel + 1) % n ))
-    elif [ -z "$key" ] || [ "$key" = "$NL" ] || [ "$key" = "$CR" ]; then
-      break                                              # Enter
-    elif [ "$key" = q ] || [ "$key" = Q ]; then
-      sel=$(( n - 1 )); break                            # cancel → last item
-    fi
-  done
+    set -l cmds
+    for line in $runnable
+        test -n "$line"; and set cmds $cmds $line
+    end
+    set -l n (count $cmds)
+    test $n -eq 0; and return 0
 
-  printf '%s[?25h' "$ESC" > "$tty"                       # show cursor
-  stty "$saved" < "$tty" 2>/dev/null                     # restore terminal
-  trap - INT
-  printf '%s\n' "$sel"
-}
+    set -l to_run
 
-ccline_main() {
-  if [ "$#" -eq 0 ]; then
-    echo "usage: ccline <your thought>" >&2
-    return 2
-  fi
+    if ccline_can_interact
+        # Build menu labels: each command, optional "Run all", then "Cancel".
+        set -l labels $cmds
+        set -l all_idx 0
+        if test $n -gt 1
+            set labels $labels "➤ Run all of them"
+            set all_idx (count $labels)
+        end
+        set labels $labels "✗ Cancel"
+        set -l cancel_idx (count $labels)
 
-  local backend
-  backend="$(ccline_backend)"
-  if [ -z "$backend" ]; then
-    echo "ccline: no LLM CLI found — install 'claude' (preferred) or 'codex':" >&2
-    echo "  Claude Code: https://claude.com/claude-code" >&2
-    echo "  Codex:       https://github.com/openai/codex" >&2
-    return 127
-  fi
+        echo
+        echo "Commands found — ↑/↓ to choose, Enter to run, q to cancel:"
+        set -l choice0 (ccline_menu $labels)            # 0-indexed
+        set -l choice (math "$choice0 + 1")             # to 1-indexed
 
-  local prompt="$*"
-  local sys
-  sys="$(ccline_system_prompt)"
-
-  local answer rc spin_pid=""
-  # Show a "thinking" spinner during the blocking LLM call (interactive only).
-  # The trap guarantees the cursor is restored and no frame is left behind if
-  # the user hits Ctrl-C mid-thought.
-  if [ -t 1 ]; then
-    ccline_spinner &
-    spin_pid=$!
-    trap 'kill "$spin_pid" 2>/dev/null; printf "\r\e[K\e[?25h" > /dev/tty 2>/dev/null' INT EXIT
-  fi
-  answer="$("ccline_ask_${backend}" "$prompt" "$sys")"
-  rc=$?
-  if [ -n "$spin_pid" ]; then
-    kill "$spin_pid" 2>/dev/null
-    wait "$spin_pid" 2>/dev/null
-    printf '\r\e[K\e[?25h' > /dev/tty 2>/dev/null   # clear line, restore cursor
-    trap - INT EXIT
-    spin_pid=""
-  fi
-  if [ "$rc" -ne 0 ]; then
-    echo "ccline: $backend exited with status $rc" >&2
-    return "$rc"
-  fi
-  if [ -z "${answer//[[:space:]]/}" ]; then
-    echo "ccline: empty response from $backend" >&2
-    return 1
-  fi
-
-  # Render Markdown only when writing to a terminal; raw otherwise (pipes, files).
-  if [ -t 1 ]; then
-    printf '%s\n' "$answer" | ccline_render
-  else
-    printf '%s\n' "$answer"
-  fi
-
-  local runnable
-  runnable="$(printf '%s\n' "$answer" | ccline_extract_commands | ccline_runnable_lines)"
-  [ -z "$runnable" ] && return 0
-
-  local -a cmds=()
-  local line
-  while IFS= read -r line; do
-    [ -n "$line" ] && cmds+=("$line")
-  done <<< "$runnable"
-  local n="${#cmds[@]}"
-  [ "$n" -eq 0 ] && return 0
-
-  local i
-  local -a to_run=()
-
-  if ccline_can_interact; then
-    # Build menu labels: each command, optional "Run all", then "Cancel".
-    local -a labels=("${cmds[@]}")
-    local all_idx=-1
-    if [ "$n" -gt 1 ]; then
-      labels+=("➤ Run all of them")
-      all_idx=$(( ${#labels[@]} - 1 ))
-    fi
-    labels+=("✗ Cancel")
-    local cancel_idx=$(( ${#labels[@]} - 1 ))
-
-    echo
-    echo "Commands found — ↑/↓ to choose, Enter to run, q to cancel:"
-    local choice
-    choice="$(ccline_menu "${labels[@]}")"
-
-    if [ "$choice" -ge 0 ] 2>/dev/null && [ "$choice" -ne "$cancel_idx" ]; then
-      if [ "$all_idx" -ge 0 ] && [ "$choice" -eq "$all_idx" ]; then
-        to_run=("${cmds[@]}")
-      elif [ "$choice" -lt "$n" ]; then
-        to_run=("${cmds[$choice]}")
-      fi
-    fi
-  else
-    # Non-interactive (piped / no tty): typed-number prompt.
-    echo
-    echo "Commands found:"
-    for i in "${!cmds[@]}"; do
-      printf '  %d. %s\n' "$((i + 1))" "${cmds[i]}"
-    done
-    if [ "$n" -eq 1 ]; then
-      printf 'Run it? [y/N] '
+        if test $choice -ge 1; and test $choice -ne $cancel_idx
+            if test $all_idx -gt 0; and test $choice -eq $all_idx
+                set to_run $cmds
+            else if test $choice -le $n
+                set to_run $cmds[$choice]
+            end
+        end
     else
-      printf 'Run which? [1-%d, a=all, Enter=none] ' "$n"
-    fi
-    local ans=""
-    IFS= read -r ans || ans=""
-    case "$ans" in
-      a | A) to_run=("${cmds[@]}") ;;
-      y | Y) [ "$n" -eq 1 ] && to_run=("${cmds[0]}") ;;
-      '' | n | N) ;;
-      *[!0-9]*) ;;                                # not a number → run nothing
-      *) if [ "$ans" -ge 1 ] && [ "$ans" -le "$n" ]; then
-           to_run=("${cmds[$((ans - 1))]}")
-         fi ;;
-    esac
-  fi
+        # Non-interactive (piped / no tty): typed-number prompt.
+        echo
+        echo "Commands found:"
+        for i in (seq 1 $n)
+            printf '  %d. %s\n' $i $cmds[$i]
+        end
+        if test $n -eq 1
+            printf 'Run it? [y/N] '
+        else
+            printf 'Run which? [1-%d, a=all, Enter=none] ' $n
+        end
+        set -l ans
+        read --local ans
+        or set ans ""
+        switch $ans
+            case a A
+                set to_run $cmds
+            case y Y
+                test $n -eq 1; and set to_run $cmds[1]
+            case '' n N
+                # nothing
+            case '*'
+                if string match -qr '^[0-9]+$' -- $ans
+                    if test $ans -ge 1; and test $ans -le $n
+                        set to_run $cmds[$ans]
+                    end
+                end
+        end
+    end
 
-  [ "${#to_run[@]}" -eq 0 ] && return 0
+    test (count $to_run) -eq 0; and return 0
 
-  # When invoked from the zsh handler, hand the selection back so it runs in the
-  # user's live shell (cd/export/aliases/history all work). Otherwise run it
-  # ourselves (direct invocation, pipes, non-zsh shells).
-  if [ -n "${CCLINE_RUN_FILE:-}" ]; then
-    : > "$CCLINE_RUN_FILE"
-    for line in "${to_run[@]}"; do
-      printf '%s\n' "$line" >> "$CCLINE_RUN_FILE"
-    done
-    return 0
-  fi
+    # When invoked from the fish handler, hand the selection back so it runs in
+    # the user's live shell (cd / set / abbreviations all work). Otherwise run
+    # it ourselves (direct invocation, pipes, non-fish callers).
+    if test -n "$CCLINE_RUN_FILE"
+        echo -n "" >$CCLINE_RUN_FILE                    # truncate
+        for line in $to_run
+            echo $line >>$CCLINE_RUN_FILE
+        end
+        return 0
+    end
 
-  for line in "${to_run[@]}"; do
-    printf '$ %s\n' "$line"
-    if ! eval "$line"; then
-      rc=$?
-      echo "ccline: command failed (exit $rc); stopping." >&2
-      return "$rc"
-    fi
-  done
-}
+    for line in $to_run
+        printf '\$ %s\n' "$line"
+        if not eval $line
+            set rc $status
+            echo "ccline: command failed (exit $rc); stopping." >&2
+            return $rc
+        end
+    end
+end
 
-# Only run when executed directly, not when sourced (tests source this file).
-if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
-  ccline_main "$@"
-fi
+# Only run when executed directly, not when sourced (tests source this file
+# with __CCLINE_LIB set to load functions without running main).
+if not set -q __CCLINE_LIB
+    ccline_main $argv
+end

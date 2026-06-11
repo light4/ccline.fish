@@ -28,11 +28,16 @@ fi
 command -v gh >/dev/null || { echo "release: gh CLI not found" >&2; exit 1; }
 
 # Current pinned version = first vX.Y.Z in install.sh (the REF default).
-CUR="$(grep -Eo 'v[0-9]+\.[0-9]+\.[0-9]+' install.sh | head -1)"
-[ -n "$CUR" ] || { echo "release: could not find current version in install.sh" >&2; exit 1; }
-[ "$CUR" != "$NEW" ] || { echo "release: $NEW is already the current version" >&2; exit 1; }
+CUR="$(grep -Eo 'v[0-9]+\.[0-9]+\.[0-9]+' install.sh | head -1 || true)"
+if [ -n "$CUR" ] && [ "$CUR" = "$NEW" ]; then
+  echo "release: $NEW is already the current version" >&2; exit 1
+fi
 
-echo "Releasing ${CUR} -> ${NEW}"
+if [ -n "$CUR" ]; then
+  echo "Releasing ${CUR} -> ${NEW}"
+else
+  echo "Releasing ${NEW} (no prior version pinned in install.sh)"
+fi
 
 # Preconditions.
 [ -z "$(git status --porcelain)" ] || { echo "release: working tree not clean" >&2; exit 1; }
@@ -40,10 +45,17 @@ if git rev-parse "$NEW" >/dev/null 2>&1; then
   echo "release: tag $NEW already exists" >&2; exit 1
 fi
 echo "Running tests…"
-bash tests/test_ccline.sh >/dev/null || { echo "release: tests failed" >&2; exit 1; }
+fish tests/test_ccline.fish >/dev/null || { echo "release: tests failed" >&2; exit 1; }
 
 # Bump the pinned version (portable in-place edit via perl).
-perl -i -pe "s/\Q${CUR}\E/${NEW}/g" install.sh README.md
+if [ -n "$CUR" ]; then
+  perl -i -pe "s/\Q${CUR}\E/${NEW}/g" install.sh README.md
+else
+  # First release: pin install.sh's REF default to $NEW and refresh the README
+  # one-liner URL to point at $NEW instead of "main".
+  perl -i -pe 's{(CCLINE_REF:-)main}{$1'"$NEW"'}' install.sh
+  perl -i -pe 's{(/ccline\.fish/)main(/install\.sh)}{$1'"$NEW"'$2}' README.md
+fi
 
 # Commit + push main.
 git add -A
@@ -61,7 +73,7 @@ gh release create "$NEW" --title "ccline ${NEW}" --notes "${NOTES}
 
 ## Install
 \`\`\`sh
-curl -fsSL https://raw.githubusercontent.com/jianshuo/ccline/${NEW}/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/jianshuo/ccline.fish/${NEW}/install.sh | bash
 \`\`\`"
 
-echo "Released ${NEW}: https://github.com/jianshuo/ccline/releases/tag/${NEW}"
+echo "Released ${NEW}: https://github.com/jianshuo/ccline.fish/releases/tag/${NEW}"
