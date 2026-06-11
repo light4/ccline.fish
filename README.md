@@ -1,6 +1,7 @@
 # ccline (fish edition)
 
 [![GitHub stars](https://img.shields.io/github/stars/light4/ccline.fish?style=flat-square)](https://github.com/light4/ccline.fish/stargazers)
+[![Fisher](https://img.shields.io/badge/fisher-plugin-1e90ff?style=flat-square&logo=fish-shell&logoColor=white)](https://github.com/jorgebucaran/fisher)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
 Type a thought directly at your fish prompt — no command, no prefix — and get
