@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Install ccline. Two paths:
-#   • Fisher (recommended):  fisher install jianshuo/ccline.fish
+#   • Fisher (recommended):  fisher install light4/ccline.fish
 #   • This script:           ./install.sh   (local clone)
 #                            curl -fsSL <raw-url>/install.sh | bash   (remote)
 #
@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-REPO="jianshuo/ccline.fish"
+REPO="light4/ccline.fish"
 REF="${CCLINE_REF:-main}"
 RAW="https://raw.githubusercontent.com/${REPO}/${REF}"
 

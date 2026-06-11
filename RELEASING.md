@@ -50,4 +50,4 @@ gh release create "$NEW" --title "ccline $NEW" --notes "…"
   Users who want the latest dev build can override with
   `CCLINE_REF=main`.
 - **Requirements to release:** `gh` authenticated, push access to
-  `jianshuo/ccline.fish`, `fish` and `perl` on PATH.
+  `light4/ccline.fish`, `fish` and `perl` on PATH.

@@ -1,6 +1,6 @@
 # ccline (fish edition)
 
-[![GitHub stars](https://img.shields.io/github/stars/jianshuo/ccline.fish?style=flat-square)](https://github.com/jianshuo/ccline.fish/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/light4/ccline.fish?style=flat-square)](https://github.com/light4/ccline.fish/stargazers)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
 Type a thought directly at your fish prompt — no command, no prefix — and get
@@ -69,19 +69,19 @@ installed; otherwise a built-in `perl` renderer (no extra dependency).
 **Fisher** (recommended):
 
 ```fish
-fisher install jianshuo/ccline.fish
+fisher install light4/ccline.fish
 ```
 
 **One-line install script** (no Fisher required):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/jianshuo/ccline.fish/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/light4/ccline.fish/main/install.sh | bash
 ```
 
 **From a clone**:
 
 ```sh
-git clone https://github.com/jianshuo/ccline.fish.git
+git clone https://github.com/light4/ccline.fish.git
 cd ccline.fish && ./install.sh
 ```
 
@@ -119,7 +119,7 @@ subprocess, so shell-state changes like `cd` won't persist there.
 ## Uninstall
 
 ```fish
-fisher remove jianshuo/ccline.fish
+fisher remove light4/ccline.fish
 ```
 
 Or without Fisher:
