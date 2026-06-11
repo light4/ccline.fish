@@ -1,29 +1,27 @@
 #!/usr/bin/env bash
 #
-# Install ccline (fish edition). Works two ways:
-#   • from a local clone:   ./install.sh
-#   • remotely:             curl -fsSL <raw-url>/install.sh | bash
+# Install ccline. Two paths:
+#   • Fisher (recommended):  fisher install jianshuo/ccline.fish
+#   • This script:           ./install.sh   (local clone)
+#                            curl -fsSL <raw-url>/install.sh | bash   (remote)
 #
-# Idempotent — safe to re-run. Drops ccline into ~/.local/bin and
-# ccline.fish into ~/.config/fish/conf.d/ (auto-loaded by fish; no config
-# edits needed).
+# This script copies the same files Fisher would, into ~/.config/fish/. Safe
+# to re-run.
 
 set -euo pipefail
 
-# Pinned to a release tag so the install command is stable across future
-# changes. Override with CCLINE_REF=main (or another tag) to install elsewhere.
 REPO="jianshuo/ccline.fish"
 REF="${CCLINE_REF:-main}"
 RAW="https://raw.githubusercontent.com/${REPO}/${REF}"
 
-BIN_DIR="${HOME}/.local/bin"
+FISH_FUNCTIONS="${HOME}/.config/fish/functions"
 FISH_CONFD="${HOME}/.config/fish/conf.d"
 
 # Find source files: prefer a local clone; otherwise download from GitHub.
 SRC_DIR=""
 if [ -n "${BASH_SOURCE:-}" ] && [ -f "${BASH_SOURCE[0]}" ]; then
   maybe="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  if [ -f "${maybe}/ccline" ] && [ -f "${maybe}/ccline.fish" ]; then
+  if [ -f "${maybe}/functions/ccline.fish" ] && [ -f "${maybe}/conf.d/ccline.fish" ]; then
     SRC_DIR="$maybe"
   fi
 fi
@@ -33,7 +31,8 @@ if [ -z "$SRC_DIR" ]; then
   echo "Downloading ccline from ${REPO}…"
   SRC_DIR="$(mktemp -d)"
   cleanup="$SRC_DIR"
-  for f in ccline ccline.fish; do
+  mkdir -p "${SRC_DIR}/functions" "${SRC_DIR}/conf.d"
+  for f in functions/ccline.fish conf.d/ccline.fish; do
     if ! curl -fsSL "${RAW}/${f}" -o "${SRC_DIR}/${f}"; then
       echo "ccline: failed to download ${f} from ${RAW}/${f}" >&2
       rm -rf "$cleanup"
@@ -42,20 +41,14 @@ if [ -z "$SRC_DIR" ]; then
   done
 fi
 
-mkdir -p "$BIN_DIR" "$FISH_CONFD"
-install -m 0755 "${SRC_DIR}/ccline" "${BIN_DIR}/ccline"
-install -m 0644 "${SRC_DIR}/ccline.fish" "${FISH_CONFD}/ccline.fish"
+mkdir -p "$FISH_FUNCTIONS" "$FISH_CONFD"
+install -m 0644 "${SRC_DIR}/functions/ccline.fish" "${FISH_FUNCTIONS}/ccline.fish"
+install -m 0644 "${SRC_DIR}/conf.d/ccline.fish" "${FISH_CONFD}/ccline.fish"
 [ -n "$cleanup" ] && rm -rf "$cleanup"
 
 echo "Installed:"
-echo "  ${BIN_DIR}/ccline"
+echo "  ${FISH_FUNCTIONS}/ccline.fish"
 echo "  ${FISH_CONFD}/ccline.fish"
-
-case ":${PATH}:" in
-  *":${BIN_DIR}:"*) ;;
-  *) echo "NOTE: ${BIN_DIR} is not on your PATH. Add it to ~/.config/fish/config.fish:"
-     echo "    fish_add_path -U ${BIN_DIR}" ;;
-esac
 
 if ! command -v fish >/dev/null 2>&1; then
   echo "NOTE: 'fish' was not found on PATH. ccline targets the fish shell."

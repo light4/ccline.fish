@@ -66,7 +66,13 @@ installed; otherwise a built-in `perl` renderer (no extra dependency).
 
 ## Install
 
-**One-line install script**:
+**Fisher** (recommended):
+
+```fish
+fisher install jianshuo/ccline.fish
+```
+
+**One-line install script** (no Fisher required):
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/jianshuo/ccline.fish/main/install.sh | bash
@@ -79,10 +85,13 @@ git clone https://github.com/jianshuo/ccline.fish.git
 cd ccline.fish && ./install.sh
 ```
 
-The install script puts `ccline` in `~/.local/bin` and `ccline.fish` in
-`~/.config/fish/conf.d/` — fish auto-loads everything in `conf.d/`, so no
-edits to `config.fish` are needed. Re-running is safe. Then open a new fish
-session.
+All three put the same two files in place:
+- `~/.config/fish/functions/ccline.fish` — the `ccline` function (autoloaded)
+- `~/.config/fish/conf.d/ccline.fish` — `fish_command_not_found` handler
+  (auto-sourced by fish on startup)
+
+No edits to `config.fish` are needed. Open a new fish session, or
+`source ~/.config/fish/conf.d/ccline.fish` to activate in this one.
 
 ## Configuration
 
@@ -109,8 +118,14 @@ subprocess, so shell-state changes like `cd` won't persist there.
 
 ## Uninstall
 
+```fish
+fisher remove jianshuo/ccline.fish
+```
+
+Or without Fisher:
+
 ```sh
-rm -f ~/.local/bin/ccline
+rm -f ~/.config/fish/functions/ccline.fish
 rm -f ~/.config/fish/conf.d/ccline.fish
 ```
 

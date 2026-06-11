@@ -1,16 +1,13 @@
-#!/usr/bin/env fish
-#
 # ccline — type a thought at your fish prompt, get an answer.
 #
-# This is the helper invoked by fish_command_not_found (see ccline.fish).
-# It sends the thought to the `claude` CLI (or `codex` as fallback), prints the
-# answer, and offers to run any shell commands the answer contains.
+# Autoloaded by fish when you call `ccline` (the function below). The handler
+# in conf.d/ccline.fish invokes this on unknown 2+-word "commands"; you can
+# also run `ccline …` directly.
 #
-# It can also be sourced (tests do this) without running main(): the dispatch
-# at the bottom only runs when __CCLINE_LIB is unset.
-
-# Optional model override, e.g. CCLINE_MODEL=claude-haiku-4-5-20251001
-set -q CCLINE_MODEL; or set -gx CCLINE_MODEL ""
+# When invoked from the handler, the handler sets $__ccline_handler_mode; in
+# that case ccline writes the user's chosen commands to the global
+# $__ccline_pending list instead of running them itself. The handler then
+# evals each one in the user's live shell so cd / set / abbrs all persist.
 
 function ccline_system_prompt
     echo 'You are a command-line assistant answering a quick question typed directly at a
@@ -24,7 +21,7 @@ end
 # Decide which LLM CLI to use. claude takes precedence; codex is the fallback.
 # CCLINE_BACKEND=claude|codex forces a choice (if that CLI is installed).
 function ccline_backend
-    if test -n "$CCLINE_BACKEND"; and command -q -- "$CCLINE_BACKEND"
+    if set -q CCLINE_BACKEND; and test -n "$CCLINE_BACKEND"; and command -q -- "$CCLINE_BACKEND"
         echo "$CCLINE_BACKEND"
         return 0
     end
@@ -43,7 +40,7 @@ function ccline_ask_claude
     # Sonnet 4.6 by default: fastest end-to-end for these short prompts and
     # plenty capable. Override with CCLINE_MODEL.
     set -l model claude-sonnet-4-6
-    test -n "$CCLINE_MODEL"; and set model $CCLINE_MODEL
+    set -q CCLINE_MODEL; and test -n "$CCLINE_MODEL"; and set model $CCLINE_MODEL
     claude -p \
         --system-prompt "$sys" \
         --tools "" \
@@ -61,7 +58,7 @@ function ccline_ask_codex
     set -l prompt $argv[1]
     set -l sys $argv[2]
     set -l model_args
-    test -n "$CCLINE_MODEL"; and set model_args --model $CCLINE_MODEL
+    set -q CCLINE_MODEL; and test -n "$CCLINE_MODEL"; and set model_args --model $CCLINE_MODEL
     set -l out (mktemp)
     printf '%s\n\nQuestion: %s\n' "$sys" "$prompt" \
         | codex exec \
@@ -125,8 +122,8 @@ end
 
 # A "thinking" animation shown while we wait for the LLM. Cycles a braille
 # spinner next to a label, redrawn in place at ~10fps, dimmed, cursor hidden.
-# Draws ONLY to /dev/tty — never stdout/stderr — because the caller captures the
-# answer via command substitution and any stray bytes would corrupt it.
+# Draws ONLY to /dev/tty — never stdout/stderr — because the caller captures
+# the answer via command substitution and any stray bytes would corrupt it.
 function ccline_spinner
     set -l tty /dev/tty
     set -l ESC \e
@@ -154,17 +151,16 @@ end
 function ccline_menu
     set -l items $argv
     set -l n (count $items)
-    set -l sel 1                                   # fish is 1-indexed internally
+    set -l sel 1
     set -l ESC \e
     set -l UP $ESC"[A"
     set -l DOWN $ESC"[B"
     set -l tty /dev/tty
 
     set -l saved (stty -g <$tty 2>/dev/null)
-    stty -echo -icanon min 1 time 0 <$tty 2>/dev/null   # raw, no echo
+    stty -echo -icanon min 1 time 0 <$tty 2>/dev/null    # raw, no echo
     printf '%s[?25l' $ESC >$tty                          # hide cursor
 
-    # Install a signal handler so Ctrl-C restores the terminal cleanly.
     set -g __ccline_menu_saved $saved
     function __ccline_menu_int --on-signal INT --inherit-variable __ccline_menu_saved
         stty $__ccline_menu_saved </dev/tty 2>/dev/null
@@ -193,7 +189,7 @@ function ccline_menu
 
         if test "$key" = $ESC
             set -l rest
-            read --nchars 2 --local --raw rest <$tty   # consume "[A"/"[B"
+            read --nchars 2 --local --raw rest <$tty
             set key "$key$rest"
         end
 
@@ -209,14 +205,14 @@ function ccline_menu
         end
     end
 
-    printf '%s[?25h' $ESC >$tty                         # show cursor
-    stty $saved <$tty 2>/dev/null                       # restore terminal
+    printf '%s[?25h' $ESC >$tty
+    stty $saved <$tty 2>/dev/null
     functions -q __ccline_menu_int; and functions -e __ccline_menu_int
     set -e __ccline_menu_saved
-    echo (math "$sel - 1")                              # caller wants 0-indexed
+    echo (math "$sel - 1")
 end
 
-function ccline_main
+function ccline
     if test (count $argv) -eq 0
         echo "usage: ccline <your thought>" >&2
         return 2
@@ -233,7 +229,6 @@ function ccline_main
     set -l prompt (string join ' ' $argv)
     set -l sys (ccline_system_prompt | string collect)
 
-    # Show a "thinking" spinner during the blocking LLM call (interactive only).
     set -l spin_pid
     if isatty stdout
         ccline_spinner &
@@ -246,7 +241,7 @@ function ccline_main
 
     if test -n "$spin_pid"
         kill $spin_pid 2>/dev/null
-        printf '\r\e[K\e[?25h' >/dev/tty 2>/dev/null   # clear line, restore cursor
+        printf '\r\e[K\e[?25h' >/dev/tty 2>/dev/null
         set spin_pid
     end
 
@@ -261,7 +256,6 @@ function ccline_main
         return 1
     end
 
-    # Render Markdown only when writing to a terminal; raw otherwise.
     if isatty stdout
         printf '%s\n' "$answer" | ccline_render
     else
@@ -281,7 +275,6 @@ function ccline_main
     set -l to_run
 
     if ccline_can_interact
-        # Build menu labels: each command, optional "Run all", then "Cancel".
         set -l labels $cmds
         set -l all_idx 0
         if test $n -gt 1
@@ -293,8 +286,8 @@ function ccline_main
 
         echo
         echo "Commands found — ↑/↓ to choose, Enter to run, q to cancel:"
-        set -l choice0 (ccline_menu $labels)            # 0-indexed
-        set -l choice (math "$choice0 + 1")             # to 1-indexed
+        set -l choice0 (ccline_menu $labels)
+        set -l choice (math "$choice0 + 1")
 
         if test $choice -ge 1; and test $choice -ne $cancel_idx
             if test $all_idx -gt 0; and test $choice -eq $all_idx
@@ -304,7 +297,6 @@ function ccline_main
             end
         end
     else
-        # Non-interactive (piped / no tty): typed-number prompt.
         echo
         echo "Commands found:"
         for i in (seq 1 $n)
@@ -336,29 +328,19 @@ function ccline_main
 
     test (count $to_run) -eq 0; and return 0
 
-    # When invoked from the fish handler, hand the selection back so it runs in
-    # the user's live shell (cd / set / abbreviations all work). Otherwise run
-    # it ourselves (direct invocation, pipes, non-fish callers).
-    if test -n "$CCLINE_RUN_FILE"
-        echo -n "" >$CCLINE_RUN_FILE                    # truncate
-        for line in $to_run
-            echo $line >>$CCLINE_RUN_FILE
-        end
+    # Called from fish_command_not_found? Hand commands back via a global so the
+    # handler can eval them in the user's live shell. Otherwise run them here.
+    if set -q __ccline_handler_mode
+        set -g __ccline_pending $to_run
         return 0
     end
 
     for line in $to_run
-        printf '\$ %s\n' "$line"
+        printf '$ %s\n' $line
         if not eval $line
             set rc $status
             echo "ccline: command failed (exit $rc); stopping." >&2
             return $rc
         end
     end
-end
-
-# Only run when executed directly, not when sourced (tests source this file
-# with __CCLINE_LIB set to load functions without running main).
-if not set -q __CCLINE_LIB
-    ccline_main $argv
 end

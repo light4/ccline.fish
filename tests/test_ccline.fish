@@ -4,10 +4,9 @@
 set HERE (cd (dirname (status filename)); and pwd)
 set ROOT (dirname $HERE)
 
-# Source ccline without auto-running main.
-set -gx __CCLINE_LIB 1
-source $ROOT/ccline
-set -e __CCLINE_LIB
+# Source the function library directly so the helpers and the public `ccline`
+# function are defined in this shell (fish would otherwise lazy-autoload them).
+source $ROOT/functions/ccline.fish
 
 set -g pass 0
 set -g fail 0
@@ -91,7 +90,7 @@ chmod +x $STUB/claude
 
 set -l saved_path $PATH
 set PATH $STUB $PATH
-set -l out (ccline_main what is the capital of France | string collect)
+set -l out (ccline what is the capital of France | string collect)
 set -l rc $status
 check "stub claude prints answer (rc)" "0" "$rc"
 check "stub claude prints answer (text)" "Paris is the capital of France." "$out"
@@ -108,32 +107,33 @@ else
     check "no spinner leak (frames)" "clean" "clean"
 end
 
-# --- CCLINE_RUN_FILE: selection is written to the file, NOT executed here ---
+# --- handler mode: ccline returns selection via $__ccline_pending, does NOT exec ---
 set sentinel $STUB/sentinel-created
 echo "#!/usr/bin/env bash
 echo \"\`\`\`bash\"
 echo \"touch $sentinel\"
 echo \"\`\`\`\"" >$STUB/claude
 chmod +x $STUB/claude
-set runfile (mktemp)
-set -lx CCLINE_RUN_FILE $runfile
-printf 'y\n' | ccline_main do a thing >/dev/null
-set -e CCLINE_RUN_FILE
+set -g __ccline_handler_mode 1
+set -g __ccline_pending
+printf 'y\n' | ccline do a thing >/dev/null
+set -e __ccline_handler_mode
 if test -e $sentinel
-    check "run-file: command NOT executed inline" "no" "yes"
+    check "handler mode: command NOT executed inline" "no" "yes"
 else
-    check "run-file: command NOT executed inline" "no" "no"
+    check "handler mode: command NOT executed inline" "no" "no"
 end
-check "run-file: contains the command" "touch $sentinel" (cat $runfile | string collect)
-rm -f $runfile $sentinel
+check "handler mode: pending list populated" "touch $sentinel" (string join \n $__ccline_pending | string collect)
+set -e __ccline_pending
+rm -f $sentinel
 
 # --- usage when no args ---
-ccline_main >/dev/null 2>&1
+ccline >/dev/null 2>&1
 check "no args => rc 2" "2" "$status"
 
 # --- no LLM CLI at all => rc 127 ---
 set PATH /nonexistent-only
-ccline_main hello there >/dev/null 2>&1
+ccline hello there >/dev/null 2>&1
 set -l rc $status
 set PATH $saved_path
 check "no LLM CLI => rc 127" "127" "$rc"
@@ -165,7 +165,7 @@ check "backend: none found" "" (ccline_backend)
 
 # end-to-end through the codex fallback (no claude on PATH)
 set PATH $ONLYCODEX /usr/bin /bin
-set -l out (ccline_main ask codex something </dev/null | string collect)
+set -l out (ccline ask codex something </dev/null | string collect)
 check "codex e2e: answer used" "CODEX_REPLY" (printf '%s' "$out" | grep -o CODEX_REPLY | head -1 | string collect)
 
 set PATH $saved_path
