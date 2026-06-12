@@ -159,20 +159,20 @@ end
 #
 # `test -r /dev/tty` is also unreliable — the device node may exist with
 # read permission but fail to actually open (e.g. detached / no controlling
-# terminal: "open: Device not configured"). We probe via `sh -c` so the
-# real open attempt determines the result; fish's parent process never
-# prints a warning on failure that way.
+# terminal: "open: Device not configured"). We probe by actually opening it
+# in a fish subshell so any redirect-failure warning stays inside the child
+# (the parent's `2>/dev/null` can't catch fish's own parser warnings).
 #
 # When invoked directly (not via the handler), we additionally require
 # stdout to be a tty so a piped `ccline foo | grep` skips the menu and
 # renderer.
 function ccline_can_interact
     if set -q __ccline_handler_mode
-        sh -c 'exec 3</dev/tty 3>/dev/tty' 2>/dev/null; or return 1
+        fish -c 'true </dev/tty >/dev/tty' 2>/dev/null; or return 1
         return 0
     end
     isatty stdout; or return 1
-    sh -c 'exec 3</dev/tty 3>/dev/tty' 2>/dev/null; or return 1
+    fish -c 'true </dev/tty >/dev/tty' 2>/dev/null; or return 1
     return 0
 end
 
