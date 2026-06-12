@@ -44,6 +44,14 @@ set -l got (printf '%s\n' "$ans" | ccline_extract_commands | ccline_runnable_lin
 check "sh + SHELL blocks, order" 'echo one
 echo two' "$got"
 
+# --- extraction: fish fence ---
+set ans 'Here:
+```fish
+set -x FOO bar
+```'
+set -l got (printf '%s\n' "$ans" | ccline_extract_commands | ccline_runnable_lines | string collect)
+check "fish block recognized" "set -x FOO bar" "$got"
+
 # --- non-shell blocks are ignored ---
 set ans '```python
 print("hi")

@@ -11,11 +11,24 @@
 
 function ccline_system_prompt
     echo 'You are a command-line assistant answering a quick question typed directly at a
-macOS fish prompt. Be concise — a few sentences at most. If your answer involves
-shell commands the user can run, put each runnable command in its own fenced
-```bash code block. Never put example output, file contents, or non-runnable
-snippets in a bash/sh/shell block. Prefer safe, non-destructive commands; if a
-command is destructive, say so plainly.'
+macOS **fish shell** prompt. Be concise — a few sentences at most.
+
+If your answer involves shell commands the user can run, put each runnable
+command in its own fenced ```fish code block, written in fish syntax — NOT
+bash/sh. Specifically:
+  • Use `set -x VAR value` (not `export VAR=value`).
+  • Use `set VAR (cmd)` for command substitution (not `$(cmd)` or backticks).
+  • Chain with `; and` / `; or` (not `&&` / `||`).
+  • Use `if/else if/end`, `for x in …; …; end`, `while …; …; end`.
+  • Use `count $argv` (not `$#`), `$argv[1]` (not `$1`).
+  • Builtins differ: `string`, `math`, `path`, `printf` are first-class.
+
+Plain commands like `find`, `ls`, `grep`, `du` are the same in both shells — use
+them directly. Only switch syntax where fish actually differs.
+
+Never put example output, file contents, or non-runnable snippets in a fish
+code block. Prefer safe, non-destructive commands; if a command is destructive,
+say so plainly.'
 end
 
 # Decide which LLM CLI to use. claude takes precedence; codex is the fallback.
@@ -73,8 +86,8 @@ function ccline_ask_codex
     return $rc
 end
 
-# Read an answer on stdin, print the lines that live inside ```bash / ```sh /
-# ```shell fenced blocks (one line per command, order preserved).
+# Read an answer on stdin, print the lines that live inside ```fish / ```bash /
+# ```sh / ```shell fenced blocks (one line per command, order preserved).
 function ccline_extract_commands
     awk '
         /^[[:space:]]*```/ {
@@ -83,7 +96,7 @@ function ccline_extract_commands
             sub(/^[[:space:]]*```/, "", info)
             gsub(/[[:space:]]/, "", info)
             info = tolower(info)
-            if (info == "bash" || info == "sh" || info == "shell") infence = 1
+            if (info == "fish" || info == "bash" || info == "sh" || info == "shell") infence = 1
             next
         }
         infence { print }
