@@ -41,15 +41,20 @@ fish session — `cd`, `set`, abbreviations, history and all.
 
 ## How it works
 
-It hijacks fish's `fish_command_not_found`. When you type something that
-isn't a real command, fish hands the whole line to ccline:
+It binds Enter (in interactive shells) and inspects what you typed before
+fish parses it:
 
-- **One word** (`gti`) → treated as a normal typo: `fish: Unknown command: gti`.
-- **Two or more words** → treated as a thought, sent to your LLM CLI. The answer
-  is rendered as Markdown. Any runnable commands are shown in an arrow-key menu —
-  **↑/↓** to move, **Enter** to run the highlighted command (or "Run all of
-  them"), **q** to cancel. When stdout isn't a terminal (piped/redirected), it
-  falls back to a typed prompt (`1-N`, `a`=all, Enter=none).
+- **One word** (`gti`) → handed off to fish as normal: `fish: Unknown command: gti`.
+- **First word is a known command** → handed off to fish as normal.
+- **Two or more words, first one isn't a command** → treated as a thought,
+  sent to your LLM CLI. The answer is rendered as Markdown. Any runnable
+  commands are shown in an arrow-key menu — **↑/↓** to move, **Enter** to
+  pick, **q** or **Ctrl-C** to cancel.
+
+The picked command is loaded into your next prompt for review/editing —
+press Enter to run it (and it lands in fish history just like any typed
+command). A thin `fish_command_not_found` handler is also installed as a
+fallback for non-binding contexts.
 
 It uses the [`claude`](https://claude.com/claude-code) CLI if installed
 (preferred), otherwise the [`codex`](https://github.com/openai/codex) CLI —
