@@ -25,9 +25,19 @@ function __ccline_smart_enter
     set -l words (string split -n ' ' -- $stripped)
     set -l first $words[1]
 
-    # Single token, or first token IS a known command → run normally.
-    # `type -q` covers builtins, functions, aliases, and binaries on PATH.
-    if test (count $words) -lt 2; or type -q -- $first 2>/dev/null
+    # First token IS a known command/builtin/function/binary → run normally.
+    # (`type -q` covers all four.)
+    if type -q -- $first 2>/dev/null
+        commandline -f execute
+        return
+    end
+
+    # First token unknown. Decide thought vs typo:
+    #   • 2+ space-separated tokens → thought (English-style: "how do I …").
+    #   • Any non-ASCII character → thought (CJK has no inter-word spaces,
+    #     so "找出当前目录最新的三个文件" is one "word" but clearly a thought).
+    #   • Otherwise (single ASCII word) → typo; let fish handle it normally.
+    if test (count $words) -lt 2; and not string match -qr '[^\x00-\x7f]' -- $stripped
         commandline -f execute
         return
     end

@@ -19,7 +19,16 @@
 # pipeline means fish records it in history just like any typed command.
 
 function fish_command_not_found
-    if test (count $argv) -ge 2; and functions -q ccline
+    # Treat as a thought if 2+ tokens, OR a single non-ASCII token (CJK
+    # languages don't use inter-word spaces).
+    set -l is_thought 0
+    if test (count $argv) -ge 2
+        set is_thought 1
+    else if test (count $argv) -eq 1; and string match -qr '[^\x00-\x7f]' -- $argv[1]
+        set is_thought 1
+    end
+
+    if test $is_thought -eq 1; and functions -q ccline
         set -g __ccline_handler_mode 1
         set -g __ccline_pending
         ccline $argv
