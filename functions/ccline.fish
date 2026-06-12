@@ -151,10 +151,28 @@ function ccline_spinner
     end
 end
 
-# True when we have an interactive terminal we can read keystrokes from.
+# True when we can render to / read from a real terminal.
+#
+# `isatty stdout` is misleading here: fish redirects the handler's stdout
+# away from the terminal when calling fish_command_not_found, so even in an
+# interactive shell that check returns false. /dev/tty bypasses the redirect.
+#
+# `test -r /dev/tty` is also unreliable — the device node may exist with
+# read permission but fail to actually open (e.g. detached / no controlling
+# terminal: "open: Device not configured"). We probe via `sh -c` so the
+# real open attempt determines the result; fish's parent process never
+# prints a warning on failure that way.
+#
+# When invoked directly (not via the handler), we additionally require
+# stdout to be a tty so a piped `ccline foo | grep` skips the menu and
+# renderer.
 function ccline_can_interact
+    if set -q __ccline_handler_mode
+        sh -c 'exec 3</dev/tty 3>/dev/tty' 2>/dev/null; or return 1
+        return 0
+    end
     isatty stdout; or return 1
-    test -r /dev/tty; or return 1
+    sh -c 'exec 3</dev/tty 3>/dev/tty' 2>/dev/null; or return 1
     return 0
 end
 
@@ -243,7 +261,7 @@ function ccline
     set -l sys (ccline_system_prompt | string collect)
 
     set -l spin_pid
-    if isatty stdout
+    if ccline_can_interact
         ccline_spinner &
         set spin_pid $last_pid
         disown $spin_pid 2>/dev/null
@@ -269,7 +287,7 @@ function ccline
         return 1
     end
 
-    if isatty stdout
+    if ccline_can_interact
         printf '%s\n' "$answer" | ccline_render
     else
         printf '%s\n' "$answer"
