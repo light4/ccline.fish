@@ -1,13 +1,15 @@
 # ccline — type a thought at your fish prompt, get an answer.
 #
 # Autoloaded by fish when you call `ccline` (the function below). The handler
-# in conf.d/ccline.fish invokes this on unknown 2+-word "commands"; you can
-# also run `ccline …` directly.
+# in functions/fish_command_not_found.fish invokes this on unknown 2+-word
+# "commands"; you can also run `ccline …` directly.
 #
 # When invoked from the handler, the handler sets $__ccline_handler_mode; in
 # that case ccline writes the user's chosen commands to the global
 # $__ccline_pending list instead of running them itself. The handler then
-# evals each one in the user's live shell so cd / set / abbrs all persist.
+# injects them into the next prompt via `commandline -r`, so the user can
+# review, edit, and press Enter — and the command lands in history just
+# like any typed command.
 
 function ccline_system_prompt
     echo 'You are a command-line assistant answering a quick question typed directly at a

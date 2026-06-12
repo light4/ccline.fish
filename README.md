@@ -107,11 +107,16 @@ activate in the current one.
 ## Running commands
 
 When you trigger ccline by typing at the prompt (the normal path), the chosen
-command runs in **your live fish session** — so `cd`, `set`, abbreviations,
-functions, and history all work and persist, exactly as if you'd typed it.
-(ccline writes the selection to a temp file and the fish handler `eval`s it.)
+command is **loaded into your next prompt** — ready to review, edit, and run.
+Press Enter to execute (and it lands in fish history just like any typed
+command). Press Ctrl-C or Backspace to discard it.
 
-Running `ccline …` directly as a command instead runs the selection in a
+This works because the handler stashes the selection in a one-shot
+`fish_prompt` event and calls `commandline -r` when fish draws the next
+prompt — so the command flows through fish's normal execution pipeline:
+`cd`, `set`, abbreviations, history all behave exactly as if you'd typed it.
+
+Running `ccline …` directly as a command instead executes the selection in a
 subprocess, so shell-state changes like `cd` won't persist there.
 
 ## Limitations
