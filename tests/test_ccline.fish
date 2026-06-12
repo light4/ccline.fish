@@ -124,7 +124,10 @@ echo \"\`\`\`\"" >$STUB/claude
 chmod +x $STUB/claude
 set -g __ccline_handler_mode 1
 set -g __ccline_pending
-printf 'y\n' | ccline do a thing >/dev/null
+# Suppress /dev/tty warnings: in this sandboxed test env /dev/tty isn't
+# openable, so the menu's writes/reads fail. The natural or-break path still
+# selects sel=1 → first command → __ccline_pending is correctly populated.
+printf 'y\n' | ccline do a thing >/dev/null 2>/dev/null
 set -e __ccline_handler_mode
 if test -e $sentinel
     check "handler mode: command NOT executed inline" "no" "yes"

@@ -54,6 +54,9 @@ function ccline_ask_claude
     # plenty capable. Override with CCLINE_MODEL.
     set -l model claude-sonnet-4-6
     set -q CCLINE_MODEL; and test -n "$CCLINE_MODEL"; and set model $CCLINE_MODEL
+    # Detach stdin: fish_command_not_found gives us a non-tty stdin (a pipe
+    # fish doesn't write to). Claude reads stdin for piped prompts, so it
+    # blocks forever waiting on that pipe. </dev/null gives it immediate EOF.
     claude -p \
         --system-prompt "$sys" \
         --tools "" \
@@ -61,7 +64,7 @@ function ccline_ask_claude
         --strict-mcp-config \
         --output-format text \
         --model "$model" \
-        "$prompt"
+        "$prompt" </dev/null
 end
 
 # Ask via the codex CLI. codex exec has no system-prompt flag, so the formatting
@@ -133,46 +136,24 @@ while (my $l = <STDIN>) {
 '
 end
 
-# A "thinking" animation shown while we wait for the LLM. Cycles a braille
-# spinner next to a label, redrawn in place at ~10fps, dimmed, cursor hidden.
-# Draws ONLY to /dev/tty — never stdout/stderr — because the caller captures
-# the answer via command substitution and any stray bytes would corrupt it.
-function ccline_spinner
-    set -l tty /dev/tty
-    set -l ESC \e
-    set -l frames ⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏
-    set -l n (count $frames)
-    set -l i 1
-    printf '%s[?25l' $ESC >$tty 2>/dev/null    # hide cursor
-    while true
-        printf '\r%s[2m%s thinking…%s[0m' $ESC $frames[$i] $ESC >$tty 2>/dev/null
-        set i (math "($i % $n) + 1")
-        sleep 0.1
-    end
-end
+# (ccline_spinner is defined in its own autoloadable file so we can launch it
+# as a real subprocess via `fish -c ccline_spinner &` — fish 4 silently blocks
+# the parent when you background an in-process fish function with &.)
 
 # True when we can render to / read from a real terminal.
 #
-# `isatty stdout` is misleading here: fish redirects the handler's stdout
-# away from the terminal when calling fish_command_not_found, so even in an
-# interactive shell that check returns false. /dev/tty bypasses the redirect.
+# Two non-overlapping signals — no /dev/tty probe needed:
 #
-# `test -r /dev/tty` is also unreliable — the device node may exist with
-# read permission but fail to actually open (e.g. detached / no controlling
-# terminal: "open: Device not configured"). We probe by actually opening it
-# in a fish subshell so any redirect-failure warning stays inside the child
-# (the parent's `2>/dev/null` can't catch fish's own parser warnings).
+#   • Handler mode: fish's embedded config.fish only registers its default
+#     fish_command_not_found in NON-interactive shells, so our override
+#     never fires unless the user is at an interactive terminal. /dev/tty
+#     is therefore guaranteed openable.
 #
-# When invoked directly (not via the handler), we additionally require
-# stdout to be a tty so a piped `ccline foo | grep` skips the menu and
-# renderer.
+#   • Direct invocation: gate on `isatty stdout` so a piped
+#     `ccline foo | grep` correctly falls back to the typed-prompt path.
 function ccline_can_interact
-    if set -q __ccline_handler_mode
-        fish -c 'true </dev/tty >/dev/tty' 2>/dev/null; or return 1
-        return 0
-    end
+    set -q __ccline_handler_mode; and return 0
     isatty stdout; or return 1
-    fish -c 'true </dev/tty >/dev/tty' 2>/dev/null; or return 1
     return 0
 end
 
@@ -215,12 +196,12 @@ function ccline_menu
         end
 
         set -l key
-        read --nchars 1 --local --raw key <$tty
+        read --nchars 1 --local key <$tty
         or break
 
         if test "$key" = $ESC
             set -l rest
-            read --nchars 2 --local --raw rest <$tty
+            read --nchars 2 --local rest <$tty
             set key "$key$rest"
         end
 
@@ -262,7 +243,9 @@ function ccline
 
     set -l spin_pid
     if ccline_can_interact
-        ccline_spinner &
+        # Subshell — see ccline_spinner.fish for why & on the function alone
+        # blocks the parent in fish 4.
+        fish -c ccline_spinner &
         set spin_pid $last_pid
         disown $spin_pid 2>/dev/null
     end
