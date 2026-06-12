@@ -5,24 +5,26 @@
 #   • This script:           ./install.fish   (local clone)
 #                            curl -fsSL <raw-url>/install.fish | source   (remote)
 #
-# This script copies the same files Fisher would, into ~/.config/fish/. Safe
-# to re-run.
+# Both drop two files into ~/.config/fish/functions/. Safe to re-run.
 
 set REPO light4/ccline.fish
 set REF (set -q CCLINE_REF; and echo $CCLINE_REF; or echo main)
 set RAW "https://raw.githubusercontent.com/$REPO/$REF"
 
 set FISH_FUNCTIONS $HOME/.config/fish/functions
-set FISH_CONFD $HOME/.config/fish/conf.d
+
+set FILES functions/ccline.fish functions/fish_command_not_found.fish
 
 # Find source files: prefer a local clone; otherwise download from GitHub.
 set SRC_DIR ""
 set -l self (status filename)
 if test -n "$self"
     set -l maybe (cd (dirname $self); and pwd)
-    if test -f "$maybe/functions/ccline.fish"; and test -f "$maybe/conf.d/ccline.fish"
-        set SRC_DIR $maybe
+    set -l ok 1
+    for f in $FILES
+        test -f "$maybe/$f"; or set ok 0
     end
+    test $ok -eq 1; and set SRC_DIR $maybe
 end
 
 set cleanup ""
@@ -30,8 +32,8 @@ if test -z "$SRC_DIR"
     echo "Downloading ccline from $REPO…"
     set SRC_DIR (mktemp -d)
     set cleanup $SRC_DIR
-    mkdir -p $SRC_DIR/functions $SRC_DIR/conf.d
-    for f in functions/ccline.fish conf.d/ccline.fish
+    mkdir -p $SRC_DIR/functions
+    for f in $FILES
         if not curl -fsSL "$RAW/$f" -o "$SRC_DIR/$f"
             echo "ccline: failed to download $f from $RAW/$f" >&2
             rm -rf $cleanup
@@ -40,14 +42,18 @@ if test -z "$SRC_DIR"
     end
 end
 
-mkdir -p $FISH_FUNCTIONS $FISH_CONFD
-install -m 0644 $SRC_DIR/functions/ccline.fish $FISH_FUNCTIONS/ccline.fish
-install -m 0644 $SRC_DIR/conf.d/ccline.fish $FISH_CONFD/ccline.fish
+mkdir -p $FISH_FUNCTIONS
+for f in $FILES
+    set -l base (basename $f)
+    install -m 0644 $SRC_DIR/$f $FISH_FUNCTIONS/$base
+end
 test -n "$cleanup"; and rm -rf $cleanup
 
 echo Installed:
-echo "  $FISH_FUNCTIONS/ccline.fish"
-echo "  $FISH_CONFD/ccline.fish"
+for f in $FILES
+    set -l base (basename $f)
+    echo "  $FISH_FUNCTIONS/$base"
+end
 
 if not command -q claude
     echo "NOTE: the 'claude' CLI was not found. ccline needs it (or 'codex'):"
@@ -55,7 +61,7 @@ if not command -q claude
 end
 
 echo
-echo "Done. Open a new fish session, or run:"
-echo "    source $FISH_CONFD/ccline.fish"
-echo "and just type a thought:"
+echo "Done. Open a new fish session — or run this once in the current one:"
+echo "    source $FISH_FUNCTIONS/fish_command_not_found.fish"
+echo "Then just type a thought:"
 echo "    how do I find files bigger than 100MB here"

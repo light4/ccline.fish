@@ -88,11 +88,12 @@ cd ccline.fish; and ./install.fish
 
 All three put the same two files in place:
 - `~/.config/fish/functions/ccline.fish` — the `ccline` function (autoloaded)
-- `~/.config/fish/conf.d/ccline.fish` — `fish_command_not_found` handler
-  (auto-sourced by fish on startup)
+- `~/.config/fish/functions/fish_command_not_found.fish` — the handler
+  (autoloaded; overrides fish's default so 2+-word thoughts reach ccline)
 
-No edits to `config.fish` are needed. Open a new fish session, or
-`source ~/.config/fish/conf.d/ccline.fish` to activate in this one.
+No edits to `config.fish` are needed. Open a new fish session, or run
+`source ~/.config/fish/functions/fish_command_not_found.fish` once to
+activate in the current one.
 
 ## Configuration
 
@@ -127,7 +128,7 @@ Or without Fisher:
 
 ```sh
 rm -f ~/.config/fish/functions/ccline.fish
-rm -f ~/.config/fish/conf.d/ccline.fish
+rm -f ~/.config/fish/functions/fish_command_not_found.fish
 ```
 
 ## Tests

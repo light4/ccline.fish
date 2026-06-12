@@ -1,10 +1,15 @@
 # ccline — fish_command_not_found handler.
 #
-# Auto-loaded by fish from ~/.config/fish/conf.d/ when installed via fisher
-# (or install.fish). When you type something that isn't a real command, fish
-# calls this. A single unknown word is treated as a normal typo (the usual
-# "Unknown command"). Two or more words are treated as a thought and routed
-# to the `ccline` function (defined lazily in functions/ccline.fish).
+# Autoloaded by fish. Lives in functions/ (not conf.d/) so it beats fish's
+# default handler in /opt/homebrew/share/fish/functions/fish_command_not_found.fish:
+# fish's autoload always picks the user's $fish_function_path entry first, but
+# conf.d-defined functions get clobbered when the default file autoloads
+# itself on first invocation.
+#
+# When you type something that isn't a real command, fish calls this. A
+# single unknown word is a normal typo (the usual "Unknown command"). Two or
+# more words are treated as a thought and routed to the `ccline` function
+# (defined lazily in functions/ccline.fish).
 #
 # ccline writes the user's chosen commands into the global $__ccline_pending
 # list; this handler then evals each one — so cd, set, abbreviations, and
@@ -32,6 +37,6 @@ function fish_command_not_found
         return $rc
     end
 
-    printf 'fish: Unknown command: %s\n' $argv[1] >&2
+    printf 'fish: Unknown command: %s\n' (string escape -- $argv[1]) >&2
     return 127
 end

@@ -13,7 +13,7 @@ Set PlaybackSpeed 1.0
 Hide
 Type "set -gx PATH /tmp/ccline-demo-bin $HOME/.local/bin $PATH"
 Enter
-Type "source $HOME/.config/fish/conf.d/ccline.fish"
+Type "source $HOME/.config/fish/functions/fish_command_not_found.fish"
 Enter
 Type "cd /tmp/ccline-demo; and clear"
 Enter
