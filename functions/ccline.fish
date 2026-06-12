@@ -173,11 +173,15 @@ function ccline_menu
     stty -echo -icanon min 1 time 0 <$tty 2>/dev/null    # raw, no echo
     printf '%s[?25l' $ESC >$tty                          # hide cursor
 
+    # Ctrl-C cancels the menu (selects the last item — callers make that
+    # "Cancel" — and breaks the loop). The handler restores terminal state too,
+    # in case the surrounding code doesn't get to run its cleanup.
     set -g __ccline_menu_saved $saved
+    set -e __ccline_menu_cancel
     function __ccline_menu_int --on-signal INT --inherit-variable __ccline_menu_saved
+        set -g __ccline_menu_cancel 1
         stty $__ccline_menu_saved </dev/tty 2>/dev/null
         printf '\e[?25h' >/dev/tty 2>/dev/null
-        functions -e __ccline_menu_int
     end
 
     set -l first 1
@@ -195,13 +199,16 @@ function ccline_menu
             end
         end
 
-        set -l key
-        read --nchars 1 --local key <$tty
-        or break
+        # Read raw bytes via `dd` — fish's `read` builtin is line-oriented
+        # and unreliable for single-keystroke reads from /dev/tty in raw
+        # mode (especially when invoked from fish_command_not_found, whose
+        # input stream fish redirects internally).
+        set -l key (dd if=$tty bs=1 count=1 2>/dev/null | string collect)
+        set -q __ccline_menu_cancel; and set sel $n; and break
+        test -n "$key"; or break
 
         if test "$key" = $ESC
-            set -l rest
-            read --nchars 2 --local rest <$tty
+            set -l rest (dd if=$tty bs=1 count=2 2>/dev/null | string collect)
             set key "$key$rest"
         end
 
@@ -209,7 +216,7 @@ function ccline_menu
             set sel (math "(($sel - 2 + $n) % $n) + 1")
         else if test "$key" = $DOWN; or test "$key" = j; or test "$key" = J
             set sel (math "($sel % $n) + 1")
-        else if test -z "$key"; or test "$key" = \n; or test "$key" = \r
+        else if test "$key" = \n; or test "$key" = \r
             break                                       # Enter
         else if test "$key" = q; or test "$key" = Q
             set sel $n                                  # cancel → last item
@@ -221,6 +228,7 @@ function ccline_menu
     stty $saved <$tty 2>/dev/null
     functions -q __ccline_menu_int; and functions -e __ccline_menu_int
     set -e __ccline_menu_saved
+    set -e __ccline_menu_cancel
     echo (math "$sel - 1")
 end
 
