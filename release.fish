@@ -43,7 +43,10 @@ else
 end
 
 # Preconditions.
-if test -n (git status --porcelain | string collect)
+# Note: `test -n (cmd | string collect)` does NOT work — when cmd produces no
+# output, string collect emits zero arguments and `test -n` (zero-arg form)
+# returns true. Count the lines instead.
+if test (git status --porcelain | count) -gt 0
     echo "release: working tree not clean" >&2
     exit 1
 end

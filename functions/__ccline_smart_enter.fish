@@ -25,9 +25,10 @@ function __ccline_smart_enter
     set -l words (string split -n ' ' -- $stripped)
     set -l first $words[1]
 
-    # First token IS a known command/builtin/function/binary → run normally.
-    # (`type -q` covers all four.)
-    if type -q -- $first 2>/dev/null
+    # First token IS a known command/builtin/function/binary or abbreviation
+    # → run normally. `type -q` covers the first four; `abbr -q` covers
+    # abbreviations (which expand at execute time, so we must defer to fish).
+    if type -q -- $first 2>/dev/null; or abbr -q -- $first 2>/dev/null
         commandline -f execute
         return
     end
@@ -49,9 +50,13 @@ function __ccline_smart_enter
     printf '\n'                        # advance past the prompt line
 
     # Run ccline in handler-mode: it shows menu, populates $__ccline_pending.
+    # Pass $stripped (the original line) as a single argument so the user's
+    # exact wording — including quoted strings, multi-space, and any other
+    # whitespace — reaches the LLM intact. Splitting into $words and passing
+    # those would collapse "two   spaces" to "two spaces" etc.
     set -g __ccline_handler_mode 1
     set -g __ccline_pending
-    ccline $words
+    ccline $stripped
     set -e __ccline_handler_mode
 
     # Load the chosen command into the buffer for review/edit/run.
