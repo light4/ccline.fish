@@ -258,6 +258,22 @@ function ccline
         fish -c ccline_spinner &
         set spin_pid $last_pid
         disown $spin_pid 2>/dev/null
+
+        # The spinner lives in its own process group (it's a backgrounded job),
+        # so Ctrl-C during the `claude`/`codex` call never reaches it — and the
+        # cleanup below is skipped because SIGINT aborts this function first.
+        # Without a handler the "thinking…" animation spins forever. Mirror the
+        # menu's pattern: an INT handler that kills the spinner, clears its line,
+        # and restores the cursor. It erases itself so it can't fire at a later,
+        # idle prompt with a stale pid.
+        set -g __ccline_spin_pid $spin_pid
+        function __ccline_spin_int --on-signal INT
+            set -q __ccline_spin_pid; and test -n "$__ccline_spin_pid"
+            and kill $__ccline_spin_pid 2>/dev/null
+            set -e __ccline_spin_pid
+            printf '\r\e[K\e[?25h' >/dev/tty 2>/dev/null
+            functions -e __ccline_spin_int
+        end
     end
 
     set -l answer (ccline_ask_$backend "$prompt" "$sys" | string collect)
@@ -265,6 +281,8 @@ function ccline
 
     if test -n "$spin_pid"
         kill $spin_pid 2>/dev/null
+        functions -q __ccline_spin_int; and functions -e __ccline_spin_int
+        set -e __ccline_spin_pid
         printf '\r\e[K\e[?25h' >/dev/tty 2>/dev/null
         set spin_pid
     end
