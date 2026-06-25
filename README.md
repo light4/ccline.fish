@@ -57,8 +57,10 @@ command). A thin `fish_command_not_found` handler is also installed as a
 fallback for non-binding contexts.
 
 It uses the [`claude`](https://claude.com/claude-code) CLI if installed
-(preferred), otherwise the [`codex`](https://github.com/openai/codex) CLI —
-auto-detected. Force one with `CCLINE_BACKEND=claude` or `CCLINE_BACKEND=codex`.
+(preferred), otherwise the [`codex`](https://github.com/openai/codex) CLI, then
+Pi's [`pi`](https://github.com/earendil-works/pi) CLI, then GitHub's
+[`copilot`](https://github.com/github/copilot-cli) CLI — auto-detected. Force one
+with `CCLINE_BACKEND=claude`, `codex`, `pi`, or `copilot`.
 
 Markdown rendering uses [`glow`](https://github.com/charmbracelet/glow) if it's
 installed; otherwise a built-in `perl` renderer (no extra dependency).
@@ -68,7 +70,9 @@ installed; otherwise a built-in `perl` renderer (no extra dependency).
 - [fish](https://fishshell.com) 3.1 or newer
 - One of these on your `PATH`, authenticated:
   - [`claude`](https://claude.com/claude-code) (preferred), or
-  - [`codex`](https://github.com/openai/codex) (fallback)
+  - [`codex`](https://github.com/openai/codex) (fallback), or
+  - [`pi`](https://github.com/earendil-works/pi) (fallback), or
+  - [`copilot`](https://github.com/github/copilot-cli) (fallback)
 
 ## Install
 
@@ -102,8 +106,8 @@ activate in the current one.
 
 ## Configuration
 
-- `CCLINE_BACKEND` — force the LLM CLI: `claude` or `codex`. Default is
-  auto-detect (claude preferred, codex fallback).
+- `CCLINE_BACKEND` — force the LLM CLI: `claude`, `codex`, `pi`, or `copilot`.
+  Default is auto-detect (`claude`, then `codex`, then `pi`, then `copilot`).
 - `CCLINE_MODEL` — override the model. The claude backend defaults to
   `claude-sonnet-4-6` (fastest end-to-end for these short prompts); set this to
   use another, e.g. `set -gx CCLINE_MODEL claude-opus-4-8`. Passed as `--model`

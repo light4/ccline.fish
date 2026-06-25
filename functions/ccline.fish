@@ -33,8 +33,9 @@ code block. Prefer safe, non-destructive commands; if a command is destructive,
 say so plainly.'
 end
 
-# Decide which LLM CLI to use. claude takes precedence; codex is the fallback.
-# CCLINE_BACKEND=claude|codex forces a choice (if that CLI is installed).
+# Decide which LLM CLI to use. Detection order: claude, codex, pi, then GitHub
+# Copilot (`copilot`). CCLINE_BACKEND=claude|codex|pi|copilot forces a choice
+# (if that CLI is installed).
 function ccline_backend
     if set -q CCLINE_BACKEND; and test -n "$CCLINE_BACKEND"; and command -q -- "$CCLINE_BACKEND"
         echo "$CCLINE_BACKEND"
@@ -44,6 +45,10 @@ function ccline_backend
         echo claude
     else if command -q codex
         echo codex
+    else if command -q pi
+        echo pi
+    else if command -q copilot
+        echo copilot
     end
 end
 
@@ -69,6 +74,33 @@ function ccline_ask_claude
         "$prompt" </dev/null
 end
 
+# Ask via the pi CLI. Print mode, no saved session, and every built-in
+# tool/resource loader disabled — none are needed for a quick shell question.
+function ccline_ask_pi
+    set -l prompt $argv[1]
+    set -l sys $argv[2]
+    set -l model_args
+    set -q CCLINE_MODEL; and test -n "$CCLINE_MODEL"; and set model_args --model $CCLINE_MODEL
+    # </dev/null: same reason as the claude path — the handler hands us a
+    # non-tty stdin pipe fish never writes to, so give pi immediate EOF.
+    pi \
+        --print \
+        --mode text \
+        --offline \
+        --no-session \
+        --no-tools \
+        --no-extensions \
+        --no-skills \
+        --no-prompt-templates \
+        --no-themes \
+        --no-context-files \
+        --no-approve \
+        --thinking off \
+        --system-prompt "$sys" \
+        $model_args \
+        "$prompt" </dev/null
+end
+
 # Ask via the codex CLI. codex exec has no system-prompt flag, so the formatting
 # instructions are prepended to the prompt. read-only sandbox so it can't change
 # anything while answering; -o captures just the final message.
@@ -89,6 +121,32 @@ function ccline_ask_codex
     cat "$out" 2>/dev/null
     rm -f "$out"
     return $rc
+end
+
+# Ask via the GitHub Copilot CLI (`copilot`). Like codex, it has no
+# system-prompt flag, so the formatting instructions are prepended to the
+# prompt. Non-interactive (-p), response-only (-s, no stats banner), no color,
+# no custom instructions (AGENTS.md), no built-in MCP servers, and an empty
+# --available-tools list so it can only answer — never edit files or run
+# commands. Echoes the answer; returns copilot's exit status.
+function ccline_ask_copilot
+    set -l prompt $argv[1]
+    set -l sys $argv[2]
+    set -l model_args
+    set -q CCLINE_MODEL; and test -n "$CCLINE_MODEL"; and set model_args --model $CCLINE_MODEL
+    # Build the combined prompt as one string — `string collect` keeps the
+    # newlines from collapsing into separate argv entries.
+    set -l full (printf '%s\n\nQuestion: %s\n' "$sys" "$prompt" | string collect)
+    # --available-tools goes last: it's variadic, so any flag after it could be
+    # swallowed as a tool name. </dev/null for the same reason as claude/pi.
+    copilot \
+        -p "$full" \
+        -s \
+        --no-color \
+        --no-custom-instructions \
+        --disable-builtin-mcps \
+        $model_args \
+        --available-tools </dev/null
 end
 
 # Read an answer on stdin, print the lines that live inside ```fish / ```bash /
@@ -242,9 +300,11 @@ function ccline
 
     set -l backend (ccline_backend)
     if test -z "$backend"
-        echo "ccline: no LLM CLI found — install 'claude' (preferred) or 'codex':" >&2
+        echo "ccline: no LLM CLI found — install 'claude' (preferred), 'codex', 'pi', or 'copilot':" >&2
         echo "  Claude Code: https://claude.com/claude-code" >&2
         echo "  Codex:       https://github.com/openai/codex" >&2
+        echo "  Pi:          https://github.com/earendil-works/pi" >&2
+        echo "  Copilot:     https://github.com/github/copilot-cli" >&2
         return 127
     end
 

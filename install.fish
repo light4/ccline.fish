@@ -69,9 +69,12 @@ for f in $FILES
     end
 end
 
-if not command -q claude
-    echo "NOTE: the 'claude' CLI was not found. ccline needs it (or 'codex'):"
-    echo "      https://claude.com/claude-code"
+if not command -q claude; and not command -q codex; and not command -q pi; and not command -q copilot
+    echo "NOTE: no supported LLM CLI was found. ccline needs one:"
+    echo "      Claude Code: https://claude.com/claude-code"
+    echo "      Codex:       https://github.com/openai/codex"
+    echo "      Pi:          https://github.com/earendil-works/pi"
+    echo "      Copilot:     https://github.com/github/copilot-cli"
 end
 
 echo

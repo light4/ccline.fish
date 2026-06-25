@@ -149,16 +149,23 @@ set -l rc $status
 set PATH $saved_path
 check "no LLM CLI => rc 127" "127" "$rc"
 
-# --- backend detection: claude precedence, codex fallback, override, none ---
+# --- backend detection: claude > codex > pi > copilot, overrides, none ---
 set BOTH (mktemp -d)
 set ONLYCODEX (mktemp -d)
+set ONLYPI (mktemp -d)
+set ONLYCOPILOT (mktemp -d)
 printf '#!/usr/bin/env bash\necho CLAUDE_REPLY\n' >$BOTH/claude
 echo '#!/usr/bin/env bash
 out=""; while [ $# -gt 0 ]; do case "$1" in -o) out="$2"; shift 2 ;; *) shift ;; esac; done
 cat >/dev/null
 [ -n "$out" ] && printf "CODEX_REPLY\n" > "$out"' >$BOTH/codex
+printf '#!/usr/bin/env bash\necho PI_REPLY\n' >$BOTH/pi
+printf '#!/usr/bin/env bash\necho COPILOT_REPLY\n' >$BOTH/copilot
 cp $BOTH/codex $ONLYCODEX/codex
-chmod +x $BOTH/claude $BOTH/codex $ONLYCODEX/codex
+cp $BOTH/pi $ONLYPI/pi
+cp $BOTH/copilot $ONLYCOPILOT/copilot
+chmod +x $BOTH/claude $BOTH/codex $BOTH/pi $BOTH/copilot \
+    $ONLYCODEX/codex $ONLYPI/pi $ONLYCOPILOT/copilot
 
 set PATH $BOTH /usr/bin /bin
 check "backend: claude precedence" "claude" (ccline_backend)
@@ -166,9 +173,19 @@ check "backend: claude precedence" "claude" (ccline_backend)
 set PATH $ONLYCODEX /usr/bin /bin
 check "backend: codex fallback" "codex" (ccline_backend)
 
+set PATH $ONLYPI /usr/bin /bin
+check "backend: pi fallback" "pi" (ccline_backend)
+
+set PATH $ONLYCOPILOT /usr/bin /bin
+check "backend: copilot fallback" "copilot" (ccline_backend)
+
 set PATH $BOTH /usr/bin /bin
 set -x CCLINE_BACKEND codex
 check "backend: override to codex" "codex" (ccline_backend)
+set -x CCLINE_BACKEND pi
+check "backend: override to pi" "pi" (ccline_backend)
+set -x CCLINE_BACKEND copilot
+check "backend: override to copilot" "copilot" (ccline_backend)
 set -e CCLINE_BACKEND
 
 set PATH /nonexistent
@@ -180,7 +197,7 @@ set -l out (ccline ask codex something </dev/null | string collect)
 check "codex e2e: answer used" "CODEX_REPLY" (printf '%s' "$out" | grep -o CODEX_REPLY | head -1 | string collect)
 
 set PATH $saved_path
-rm -rf $BOTH $ONLYCODEX $STUB
+rm -rf $BOTH $ONLYCODEX $ONLYPI $ONLYCOPILOT $STUB
 
 echo
 echo "passed: $pass, failed: $fail"
