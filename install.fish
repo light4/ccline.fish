@@ -8,7 +8,7 @@
 # Drops files into ~/.config/fish/{functions,conf.d}/. Safe to re-run.
 
 set REPO light4/ccline.fish
-set REF (set -q CCLINE_REF; and echo $CCLINE_REF; or echo main)
+set REF (set -q CCLINE_REF; and echo $CCLINE_REF; or echo v0.1.0)
 set RAW "https://raw.githubusercontent.com/$REPO/$REF"
 
 set FISH_FUNCTIONS $HOME/.config/fish/functions

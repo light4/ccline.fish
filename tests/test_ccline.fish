@@ -90,18 +90,28 @@ else
     check "render keeps code text" "yes" "no"
 end
 
-# --- end-to-end with a stubbed claude: no commands => prints answer, rc 0 ---
+# --- end-to-end with a stubbed pi: no commands => prints answer, rc 0 ---
 set STUB (mktemp -d)
 echo '#!/usr/bin/env bash
-echo "Paris is the capital of France."' >$STUB/claude
-chmod +x $STUB/claude
+[[ " $* " == *" -- Question: "* ]] || exit 2
+case "${@: -1}" in
+  "Question: what is the capital of France") echo "Paris is the capital of France." ;;
+  "Question: -what is the capital of France") echo DASH_OK ;;
+  "Question: @README.md") echo AT_OK ;;
+  *) exit 2 ;;
+esac' >$STUB/pi
+chmod +x $STUB/pi
 
 set -l saved_path $PATH
 set PATH $STUB $PATH
 set -l out (ccline what is the capital of France | string collect)
 set -l rc $status
-check "stub claude prints answer (rc)" "0" "$rc"
-check "stub claude prints answer (text)" "Paris is the capital of France." "$out"
+check "stub pi prints answer (rc)" "0" "$rc"
+check "stub pi prints answer (text)" "Paris is the capital of France." "$out"
+set -l dashed (ccline -what is the capital of France </dev/null | string collect)
+check "pi: leading dash reaches prompt" "DASH_OK" "$dashed"
+set -l at_file (ccline @README.md </dev/null | string collect)
+check "pi: leading @ is not a file argument" "AT_OK" "$at_file"
 
 # spinner must NOT leak into captured (non-tty) output
 if string match -q '*thinking*' -- $out
@@ -120,8 +130,8 @@ set sentinel $STUB/sentinel-created
 echo "#!/usr/bin/env bash
 echo \"\`\`\`bash\"
 echo \"touch $sentinel\"
-echo \"\`\`\`\"" >$STUB/claude
-chmod +x $STUB/claude
+echo \"\`\`\`\"" >$STUB/pi
+chmod +x $STUB/pi
 set -g __ccline_handler_mode 1
 set -g __ccline_pending
 # Suppress /dev/tty warnings: in this sandboxed test env /dev/tty isn't
@@ -149,8 +159,9 @@ set -l rc $status
 set PATH $saved_path
 check "no LLM CLI => rc 127" "127" "$rc"
 
-# --- backend detection: claude > codex > pi > copilot, overrides, none ---
+# --- backend detection: pi > claude > codex > copilot, overrides, none ---
 set BOTH (mktemp -d)
+set ONLYCLAUDE (mktemp -d)
 set ONLYCODEX (mktemp -d)
 set ONLYPI (mktemp -d)
 set ONLYCOPILOT (mktemp -d)
@@ -161,14 +172,18 @@ cat >/dev/null
 [ -n "$out" ] && printf "CODEX_REPLY\n" > "$out"' >$BOTH/codex
 printf '#!/usr/bin/env bash\necho PI_REPLY\n' >$BOTH/pi
 printf '#!/usr/bin/env bash\necho COPILOT_REPLY\n' >$BOTH/copilot
+cp $BOTH/claude $ONLYCLAUDE/claude
 cp $BOTH/codex $ONLYCODEX/codex
 cp $BOTH/pi $ONLYPI/pi
 cp $BOTH/copilot $ONLYCOPILOT/copilot
 chmod +x $BOTH/claude $BOTH/codex $BOTH/pi $BOTH/copilot \
-    $ONLYCODEX/codex $ONLYPI/pi $ONLYCOPILOT/copilot
+    $ONLYCLAUDE/claude $ONLYCODEX/codex $ONLYPI/pi $ONLYCOPILOT/copilot
 
 set PATH $BOTH /usr/bin /bin
-check "backend: claude precedence" "claude" (ccline_backend)
+check "backend: pi precedence" "pi" (ccline_backend)
+
+set PATH $ONLYCLAUDE /usr/bin /bin
+check "backend: claude fallback" "claude" (ccline_backend)
 
 set PATH $ONLYCODEX /usr/bin /bin
 check "backend: codex fallback" "codex" (ccline_backend)
@@ -180,24 +195,35 @@ set PATH $ONLYCOPILOT /usr/bin /bin
 check "backend: copilot fallback" "copilot" (ccline_backend)
 
 set PATH $BOTH /usr/bin /bin
+set -x CCLINE_BACKEND claude
+check "backend: override to claude" "claude" (ccline_backend)
 set -x CCLINE_BACKEND codex
 check "backend: override to codex" "codex" (ccline_backend)
 set -x CCLINE_BACKEND pi
 check "backend: override to pi" "pi" (ccline_backend)
 set -x CCLINE_BACKEND copilot
 check "backend: override to copilot" "copilot" (ccline_backend)
+set -x CCLINE_BACKEND bash
+check "backend: unsupported override rejected" "" (ccline_backend)
+ccline hello >/dev/null 2>&1
+check "unsupported override => rc 127" "127" "$status"
+set -x CCLINE_BACKEND claude
+set PATH $ONLYPI /usr/bin /bin
+check "backend: unavailable override rejected" "" (ccline_backend)
+ccline hello >/dev/null 2>&1
+check "unavailable override => rc 127" "127" "$status"
 set -e CCLINE_BACKEND
 
 set PATH /nonexistent
 check "backend: none found" "" (ccline_backend)
 
-# end-to-end through the codex fallback (no claude on PATH)
+# end-to-end through the codex fallback (no pi or claude on PATH)
 set PATH $ONLYCODEX /usr/bin /bin
 set -l out (ccline ask codex something </dev/null | string collect)
 check "codex e2e: answer used" "CODEX_REPLY" (printf '%s' "$out" | grep -o CODEX_REPLY | head -1 | string collect)
 
 set PATH $saved_path
-rm -rf $BOTH $ONLYCODEX $ONLYPI $ONLYCOPILOT $STUB
+rm -rf $BOTH $ONLYCLAUDE $ONLYCODEX $ONLYPI $ONLYCOPILOT $STUB
 
 echo
 echo "passed: $pass, failed: $fail"

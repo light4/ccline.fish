@@ -33,20 +33,21 @@ code block. Prefer safe, non-destructive commands; if a command is destructive,
 say so plainly.'
 end
 
-# Decide which LLM CLI to use. Detection order: claude, codex, pi, then GitHub
-# Copilot (`copilot`). CCLINE_BACKEND=claude|codex|pi|copilot forces a choice
-# (if that CLI is installed).
+# Prefer Pi, then Claude, Codex, and GitHub Copilot. CCLINE_BACKEND
+# explicitly selects an installed supported backend.
 function ccline_backend
-    if set -q CCLINE_BACKEND; and test -n "$CCLINE_BACKEND"; and command -q -- "$CCLINE_BACKEND"
-        echo "$CCLINE_BACKEND"
-        return 0
+    if set -q CCLINE_BACKEND; and test -n "$CCLINE_BACKEND"
+        if contains -- "$CCLINE_BACKEND" pi claude codex copilot; and command -q -- "$CCLINE_BACKEND"
+            echo "$CCLINE_BACKEND"
+        end
+        return
     end
-    if command -q claude
+    if command -q pi
+        echo pi
+    else if command -q claude
         echo claude
     else if command -q codex
         echo codex
-    else if command -q pi
-        echo pi
     else if command -q copilot
         echo copilot
     end
@@ -83,6 +84,7 @@ function ccline_ask_pi
     set -q CCLINE_MODEL; and test -n "$CCLINE_MODEL"; and set model_args --model $CCLINE_MODEL
     # </dev/null: same reason as the claude path — the handler hands us a
     # non-tty stdin pipe fish never writes to, so give pi immediate EOF.
+    # Prefix the question so leading @ is not interpreted as a file attachment.
     pi \
         --print \
         --mode text \
@@ -98,7 +100,7 @@ function ccline_ask_pi
         --thinking off \
         --system-prompt "$sys" \
         $model_args \
-        "$prompt" </dev/null
+        -- "Question: $prompt" </dev/null
 end
 
 # Ask via the codex CLI. codex exec has no system-prompt flag, so the formatting
@@ -300,15 +302,19 @@ function ccline
 
     set -l backend (ccline_backend)
     if test -z "$backend"
-        echo "ccline: no LLM CLI found — install 'claude' (preferred), 'codex', 'pi', or 'copilot':" >&2
+        if set -q CCLINE_BACKEND; and test -n "$CCLINE_BACKEND"
+            echo "ccline: unsupported or unavailable backend: $CCLINE_BACKEND" >&2
+            return 127
+        end
+        echo "ccline: no LLM CLI found — install 'pi' (preferred), 'claude', 'codex', or 'copilot':" >&2
+        echo "  Pi:          https://github.com/earendil-works/pi" >&2
         echo "  Claude Code: https://claude.com/claude-code" >&2
         echo "  Codex:       https://github.com/openai/codex" >&2
-        echo "  Pi:          https://github.com/earendil-works/pi" >&2
         echo "  Copilot:     https://github.com/github/copilot-cli" >&2
         return 127
     end
 
-    set -l prompt (string join ' ' $argv)
+    set -l prompt (string join ' ' -- $argv)
     set -l sys (ccline_system_prompt | string collect)
 
     set -l spin_pid
@@ -320,7 +326,7 @@ function ccline
         disown $spin_pid 2>/dev/null
 
         # The spinner lives in its own process group (it's a backgrounded job),
-        # so Ctrl-C during the `claude`/`codex` call never reaches it — and the
+        # so Ctrl-C during the LLM call never reaches it — and the
         # cleanup below is skipped because SIGINT aborts this function first.
         # Without a handler the "thinking…" animation spins forever. Mirror the
         # menu's pattern: an INT handler that kills the spinner, clears its line,

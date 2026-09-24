@@ -56,11 +56,11 @@ press Enter to run it (and it lands in fish history just like any typed
 command). A thin `fish_command_not_found` handler is also installed as a
 fallback for non-binding contexts.
 
-It uses the [`claude`](https://claude.com/claude-code) CLI if installed
-(preferred), otherwise the [`codex`](https://github.com/openai/codex) CLI, then
-Pi's [`pi`](https://github.com/earendil-works/pi) CLI, then GitHub's
+It uses the [`pi`](https://github.com/earendil-works/pi) CLI if installed
+(preferred), otherwise [`claude`](https://claude.com/claude-code), then
+[`codex`](https://github.com/openai/codex), then GitHub's
 [`copilot`](https://github.com/github/copilot-cli) CLI — auto-detected. Force one
-with `CCLINE_BACKEND=claude`, `codex`, `pi`, or `copilot`.
+with `CCLINE_BACKEND=pi`, `claude`, `codex`, or `copilot`.
 
 Markdown rendering uses [`glow`](https://github.com/charmbracelet/glow) if it's
 installed; otherwise a built-in `perl` renderer (no extra dependency).
@@ -69,9 +69,9 @@ installed; otherwise a built-in `perl` renderer (no extra dependency).
 
 - [fish](https://fishshell.com) 3.1 or newer
 - One of these on your `PATH`, authenticated:
-  - [`claude`](https://claude.com/claude-code) (preferred), or
+  - [`pi`](https://github.com/earendil-works/pi) (preferred), or
+  - [`claude`](https://claude.com/claude-code) (fallback), or
   - [`codex`](https://github.com/openai/codex) (fallback), or
-  - [`pi`](https://github.com/earendil-works/pi) (fallback), or
   - [`copilot`](https://github.com/github/copilot-cli) (fallback)
 
 ## Install
@@ -85,7 +85,7 @@ fisher install light4/ccline.fish
 **One-line install script** (no Fisher required):
 
 ```fish
-curl -fsSL https://raw.githubusercontent.com/light4/ccline.fish/main/install.fish | source
+curl -fsSL https://raw.githubusercontent.com/light4/ccline.fish/v0.1.0/install.fish | source
 ```
 
 **From a clone**:
@@ -95,10 +95,12 @@ git clone https://github.com/light4/ccline.fish.git
 cd ccline.fish; and ./install.fish
 ```
 
-All three put the same two files in place:
-- `~/.config/fish/functions/ccline.fish` — the `ccline` function (autoloaded)
-- `~/.config/fish/functions/fish_command_not_found.fish` — the handler
-  (autoloaded; overrides fish's default so 2+-word thoughts reach ccline)
+All three install five files:
+- `~/.config/fish/functions/ccline.fish` — the `ccline` function
+- `~/.config/fish/functions/ccline_spinner.fish` — the spinner
+- `~/.config/fish/functions/__ccline_smart_enter.fish` — the Enter handler
+- `~/.config/fish/functions/fish_command_not_found.fish` — the fallback handler
+- `~/.config/fish/conf.d/ccline.fish` — the Enter binding
 
 No edits to `config.fish` are needed. Open a new fish session, or run
 `source ~/.config/fish/functions/fish_command_not_found.fish` once to
@@ -106,8 +108,8 @@ activate in the current one.
 
 ## Configuration
 
-- `CCLINE_BACKEND` — force the LLM CLI: `claude`, `codex`, `pi`, or `copilot`.
-  Default is auto-detect (`claude`, then `codex`, then `pi`, then `copilot`).
+- `CCLINE_BACKEND` — force the LLM CLI: `pi`, `claude`, `codex`, or `copilot`.
+  Default is auto-detect (`pi`, then `claude`, then `codex`, then `copilot`).
 - `CCLINE_MODEL` — override the model. The claude backend defaults to
   `claude-sonnet-4-6` (fastest end-to-end for these short prompts); set this to
   use another, e.g. `set -gx CCLINE_MODEL claude-opus-4-8`. Passed as `--model`
@@ -130,7 +132,9 @@ subprocess, so shell-state changes like `cd` won't persist there.
 
 ## Limitations
 
-- Single-word thoughts won't reach Claude — by design, so typos stay fast.
+- Single-word thoughts won't reach the LLM — by design, so typos stay fast.
+- Review commands before running them. Multi-line fish constructs and bash/sh
+  code blocks are not reliably runnable in fish yet.
 
 ## Uninstall
 
@@ -142,7 +146,10 @@ Or without Fisher:
 
 ```sh
 rm -f ~/.config/fish/functions/ccline.fish
+rm -f ~/.config/fish/functions/ccline_spinner.fish
+rm -f ~/.config/fish/functions/__ccline_smart_enter.fish
 rm -f ~/.config/fish/functions/fish_command_not_found.fish
+rm -f ~/.config/fish/conf.d/ccline.fish
 ```
 
 ## Tests
