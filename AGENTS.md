@@ -76,5 +76,6 @@ https://ruanyifeng.com 的技术爱好者周刊也不错，也是可以提交的
 - 首次发布：此前远端没有 tag / GitHub Release，选择 `v0.1.0`；发布内容为 Pi 默认后端、覆盖配置校验、`CLAUDE.md` → `AGENTS.md`、README 安装说明修正。
 - 发布前修复 `string join ' ' $argv` 在问题以 `-` 开头时解析报错的问题，测试桩现在验证问题内容确实传给 Pi，不再假阳性。Fish 测试 33 项通过，语法和 diff 检查通过。
 - 已知限制：bash/sh 代码块和多行 fish 控制结构尚不能安全作为 fish 命令运行，已在 README 提醒；后续优先修复并补测试，再发补丁版本。
-- 后续：核对 GitHub Release、tag、README 固定安装地址和实际安装文件；再按以上待办继续推广。
+- 已发布并核验：https://github.com/light4/ccline.fish/releases/tag/v0.1.0（正式版，非 draft/prerelease），tag 指向 `4d6a3bf`；`main` 已推送，远端固定安装脚本与本地一致，在隔离 HOME 中执行安装验证了 5/5 文件。
+- 后续：优先修复已知 fish 代码块执行限制并补测试，之后再发补丁版本；核查以上 PR/Discussion 的状态与星数，继续推广。
 
